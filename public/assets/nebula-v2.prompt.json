@@ -1,0 +1,12 @@
+{
+  "prompt": "Use case: stylized-concept\nAsset type: high quality background painting for an existing 2D space shooter browser game, landscape 1536x1024.\nPrimary request: A premium cinematic deep-space environment with an enormous realistically illuminated dark blue planet or moon in the upper right, occupying about 35% of the composition, a delicate cyan crescent on its rim, rich but restrained wisps of turquoise and cobalt nebula, distant pinprick stars and fine cosmic dust.\nStyle/medium: richly detailed hand-painted science fiction concept art with convincing cinematic depth and atmospheric light, subtle realistic surface texture and layered space clouds, professional game environment asset.\nComposition/framing: Wide landscape. Planet is concentrated in the upper-right quadrant and cropped slightly by the top/right edge. The center and bottom two thirds are predominantly very dark, calm navy negative space for bright gameplay ships and bullets. Wisps wrap around the outer perimeter, with a small warm violet gas accent near the far upper-left periphery. Keep the playfield readable and uncluttered.\nLighting/mood: Dark, immersive, mysterious, polished, monumental sense of scale; luminous turquoise edge light and faint scattered stars. No glaring white light clusters in the center or lower two thirds.\nColor palette: deep midnight navy, dark cobalt, teal, restrained cyan, tiny muted violet accents.\nText: none.\nConstraints: Must be an actual environmental background image, not a game screenshot. No spacecraft, characters, foreground objects, text, HUD, grid, logos, watermarks, flat vectors, bright white nebula clumps, or black featureless silhouette planet. Visible subtly lit planet surface texture.",
+  "generator": "built-in image_gen.imagegen",
+  "source_file": "exec-37ac78f8-e45a-4286-b872-e3ad259057f1.png",
+  "created_date": "2026-10-12",
+  "description": "Cinematic midnight-blue game background with a textured cyan-rimmed planet in the upper right and quiet central/lower playfield.",
+  "dimensions": {
+    "width": 1536,
+    "height": 1024
+  },
+  "transparent_background": false
+}
