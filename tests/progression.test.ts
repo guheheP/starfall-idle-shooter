@@ -110,8 +110,8 @@ test('module unlocks and stat tradeoffs preserve health fraction and skill coold
 });
 
 test('salvager applies once to online kills, clears, achievements, recovery and offline income', () => {
-  const standard = new Simulation(save({ wave: 9, bestWave: 8 }), NOW);
-  const salvager = new Simulation(save({ wave: 9, bestWave: 8, module: 'salvager' }), NOW);
+  const standard = new Simulation(save({ wave: 9, bestWave: 8 }), NOW, () => 0.99);
+  const salvager = new Simulation(save({ wave: 9, bestWave: 8, module: 'salvager' }), NOW, () => 0.99);
   const originalCredits = salvager.state.credits;
   kill(standard, 'pulse');
   kill(salvager, 'pulse');
