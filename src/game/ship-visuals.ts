@@ -6,6 +6,8 @@ import type { ModuleId, WeaponId } from './types';
 
 type Paint = { light: string; mid: string; dark: string; edge: string };
 type Ctx = CanvasRenderingContext2D;
+// Detail level belongs to each baked texture, so rich and compact art can coexist.
+const compactContexts = new WeakSet<Ctx>();
 const TAU = Math.PI * 2;
 const CERAMIC: Paint = { light: '#f2f4e9', mid: '#a5bcc7', dark: '#506c80', edge: '#f1ffff' };
 const TITANIUM: Paint = { light: '#d5e7ee', mid: '#7d9bad', dark: '#2b455e', edge: '#dffaff' };
@@ -25,19 +27,27 @@ function plate(ctx: Ctx, points: number[], paint = TITANIUM) {
   const xs = points.filter((_, index) => index % 2 === 0);
   const ys = points.filter((_, index) => index % 2 === 1);
   const left = Math.min(...xs), top = Math.min(...ys), right = Math.max(...xs), bottom = Math.max(...ys);
+  const compact = compactContexts.has(ctx);
   const metal = ctx.createLinearGradient(left, top, right, bottom);
   metal.addColorStop(0, paint.light);
-  metal.addColorStop(.19, paint.mid);
-  metal.addColorStop(.49, paint.dark);
-  metal.addColorStop(.55, paint.mid);
-  metal.addColorStop(.81, paint.mid);
+  if (compact) {
+    metal.addColorStop(.52, paint.mid);
+  } else {
+    metal.addColorStop(.19, paint.mid);
+    metal.addColorStop(.49, paint.dark);
+    metal.addColorStop(.55, paint.mid);
+    metal.addColorStop(.81, paint.mid);
+  }
   metal.addColorStop(1, paint.dark);
   path(ctx, points);
   ctx.fillStyle = metal;
   ctx.fill();
+  // Small muzzle/coil cells read as one face; their thin dark rims turn into specks.
+  if (compact && Math.min(right - left, bottom - top) < 7) return;
   ctx.strokeStyle = '#071421';
   ctx.lineWidth = 1.25;
   ctx.stroke();
+  if (compact) return;
   ctx.save();
   ctx.clip();
   ctx.strokeStyle = paint.edge;
@@ -51,6 +61,12 @@ function plate(ctx: Ctx, points: number[], paint = TITANIUM) {
 }
 
 function seam(ctx: Ctx, points: number[], color = '#152b40', width = .8) {
+  if (compactContexts.has(ctx) && width < 1.5) {
+    const channels = [1, 3, 5].map(offset => Number.parseInt(color.slice(offset, offset + 2), 16));
+    const saturated = Math.max(...channels) - Math.min(...channels) > 48;
+    if (!saturated || Math.max(...channels) < 110) return;
+    width = Math.max(width, 1.25);
+  }
   ctx.strokeStyle = color;
   ctx.lineWidth = width;
   ctx.lineJoin = 'bevel';
@@ -61,6 +77,7 @@ function seam(ctx: Ctx, points: number[], color = '#152b40', width = .8) {
 }
 
 function bolt(ctx: Ctx, x: number, y: number) {
+  if (compactContexts.has(ctx)) return;
   ctx.fillStyle = '#0a1a29';
   ctx.beginPath();ctx.arc(x, y, 1.05, 0, TAU);ctx.fill();
   ctx.fillStyle = '#cce4ec';ctx.fillRect(x - .35, y - .7, .65, .7);
@@ -68,6 +85,11 @@ function bolt(ctx: Ctx, x: number, y: number) {
 
 function vents(ctx: Ctx, x: number, y: number, width: number, count: number, accent?: string) {
   ctx.fillStyle = '#081722';ctx.fillRect(x - .7, y - 1, width + 1.4, count * 2.8 + 1);
+  if (compactContexts.has(ctx)) {
+    ctx.fillStyle = '#253a48';ctx.fillRect(x + .5, y + .5, Math.max(0, width - 1), Math.max(1, count * 2.8 - 2));
+    if (accent) { ctx.fillStyle = accent;ctx.fillRect(x, y + (count - 1) * 2.8, width, 1.5); }
+    return;
+  }
   for (let index = 0; index < count; index++) {
     ctx.fillStyle = accent && index === count - 1 ? accent : '#718d9d';
     ctx.fillRect(x, y + index * 2.8, width, .85);
@@ -76,11 +98,13 @@ function vents(ctx: Ctx, x: number, y: number, width: number, count: number, acc
 
 /** Small optical details are part of the object; no diffuse glow is baked in. */
 function lens(ctx: Ctx, x: number, y: number, radius: number, accent: string) {
+  const compact = compactContexts.has(ctx);
   ctx.fillStyle = '#091827';ctx.beginPath();ctx.arc(x, y, radius + 1.45, 0, TAU);ctx.fill();
-  ctx.strokeStyle = '#a8c0c8';ctx.lineWidth = .8;ctx.stroke();
+  if (!compact) { ctx.strokeStyle = '#a8c0c8';ctx.lineWidth = .8;ctx.stroke(); }
   const glass = ctx.createRadialGradient(x - radius * .32, y - radius * .4, .2, x, y, radius);
-  glass.addColorStop(0, '#eeffff');glass.addColorStop(.32, accent);glass.addColorStop(1, '#143548');
+  glass.addColorStop(0, compact ? accent : '#eeffff');glass.addColorStop(compact ? .55 : .32, accent);glass.addColorStop(1, '#143548');
   ctx.fillStyle = glass;ctx.beginPath();ctx.arc(x, y, radius, 0, TAU);ctx.fill();
+  if (compact) return;
   ctx.strokeStyle = accent;ctx.lineWidth = .7;ctx.stroke();
   ctx.fillStyle = '#f5ffff';ctx.fillRect(x - radius * .4, y - radius * .54, Math.max(.8, radius * .27), .7);
 }
@@ -90,7 +114,7 @@ function thruster(ctx: Ctx, x: number, y: number, width: number, height: number,
   vents(ctx, x + 1.8, y + 3, width - 3.6, Math.max(2, Math.floor((height - 8) / 2.8)));
   ctx.fillStyle = '#081522';ctx.fillRect(x + .5, y + height - 4, width - 1, 3);
   ctx.fillStyle = accent;ctx.fillRect(x + 1.5, y + height - 3, width - 3, 1.4);
-  ctx.fillStyle = '#eaffff';ctx.fillRect(x + 2.5, y + height - 2.6, width - 5, .5);
+  if (!compactContexts.has(ctx)) { ctx.fillStyle = '#eaffff';ctx.fillRect(x + 2.5, y + height - 2.6, width - 5, .5); }
 }
 
 function mirrored(ctx: Ctx, width: number, draw: () => void) {
@@ -105,10 +129,11 @@ function mirrored(ctx: Ctx, width: number, draw: () => void) {
 function weaponPod(ctx: Ctx, weapon: WeaponId, accent: string) {
   // The left mount is mirrored around the fuselage. Each archetype has its own silhouette.
   const x = 17;
+  const compact = compactContexts.has(ctx);
   if (weapon === 'pulse') {
     plate(ctx, [x - 5, 41, x + 6, 39, x + 8, 66, x - 5, 70], TITANIUM);
     plate(ctx, [x - 2, 21, x + 2, 21, x + 3, 53, x - 3, 53], GRAPHITE);
-    ctx.fillStyle = '#c8e0e6';ctx.fillRect(x - 2, 25, 4, 1.5);ctx.fillRect(x - 2.5, 37, 5, 2);
+    if (!compact) { ctx.fillStyle = '#c8e0e6';ctx.fillRect(x - 2, 25, 4, 1.5);ctx.fillRect(x - 2.5, 37, 5, 2); }
     ctx.fillStyle = accent;ctx.fillRect(x - 1.2, 21, 2.4, 2);
     seam(ctx, [x, 27, x, 46], accent, .7);
     vents(ctx, x + 2.5, 48, 3, 5);lens(ctx, x + 1, 62, 2.1, accent);
@@ -117,7 +142,7 @@ function weaponPod(ctx: Ctx, weapon: WeaponId, accent: string) {
     for (let index = 0; index < 3; index++) {
       const bx = x - 4.5 + index * 4.5, tip = 32 - index * 3;
       plate(ctx, [bx - 1.7, tip, bx + 1.7, tip, bx + 2, 49, bx - 2, 49], GRAPHITE);
-      ctx.fillStyle = '#b4c9d0';ctx.fillRect(bx - 2, tip + 6, 4, 1.5);
+      if (!compact) { ctx.fillStyle = '#b4c9d0';ctx.fillRect(bx - 2, tip + 6, 4, 1.5); }
       ctx.fillStyle = accent;ctx.fillRect(bx - 1, tip, 2, 2);
     }
     seam(ctx, [x - 5, 54, x + 5, 51, x + 6, 59], '#30495d');
@@ -128,7 +153,7 @@ function weaponPod(ctx: Ctx, weapon: WeaponId, accent: string) {
     plate(ctx, [x + 1, 12, x + 4, 15, x + 5, 55, x + 1, 55], CERAMIC);
     ctx.fillStyle = '#071827';ctx.fillRect(x - .7, 14, 1.4, 40);
     seam(ctx, [x, 17, x, 51], accent, 1);
-    for (const y of [24, 34, 44]) { ctx.fillStyle = '#6b7f97';ctx.fillRect(x - 4.8, y, 3.3, 2);ctx.fillRect(x + 1.5, y, 3.3, 2); }
+    if (!compact) for (const y of [24, 34, 44]) { ctx.fillStyle = '#6b7f97';ctx.fillRect(x - 4.8, y, 3.3, 2);ctx.fillRect(x + 1.5, y, 3.3, 2); }
     lens(ctx, x, 61, 3.5, accent);bolt(ctx, x - 3, 69);
   } else if (weapon === 'missile') {
     plate(ctx, [x - 8, 33, x + 8, 31, x + 10, 62, x + 5, 72, x - 8, 69], TITANIUM);
@@ -145,15 +170,16 @@ function weaponPod(ctx: Ctx, weapon: WeaponId, accent: string) {
     plate(ctx, [x - 6, 27, x - 3, 23, x - 1, 38, x - 4, 49, x - 7, 45], TITANIUM);
     plate(ctx, [x + 2, 25, x + 5, 28, x + 7, 44, x + 4, 48, x + 1, 36], TITANIUM);
     ctx.strokeStyle = '#718db1';ctx.lineWidth = 2.6;ctx.beginPath();ctx.ellipse(x, 50, 7, 10, 0, 0, TAU);ctx.stroke();
-    ctx.strokeStyle = accent;ctx.lineWidth = .75;ctx.beginPath();ctx.ellipse(x, 50, 5.2, 8, 0, .15, Math.PI * 1.25);ctx.stroke();
+    ctx.strokeStyle = accent;ctx.lineWidth = compact ? 1.25 : .75;ctx.beginPath();ctx.ellipse(x, 50, 5.2, 8, 0, .15, Math.PI * 1.25);ctx.stroke();
     lens(ctx, x, 49, 3.3, accent);
-    for (const y of [57, 61, 65]) { ctx.fillStyle = '#90a4bb';ctx.fillRect(x - 4, y, 8, 1.6); }
+    if (compact) vents(ctx, x - 4, 57, 8, 3);
+    else for (const y of [57, 61, 65]) { ctx.fillStyle = '#90a4bb';ctx.fillRect(x - 4, y, 8, 1.6); }
     ctx.fillStyle = accent;ctx.fillRect(x - 5, 26, 1.8, 2);ctx.fillRect(x + 3, 26, 1.8, 2);
   } else {
     plate(ctx, [x - 4, 40, x + 6, 40, x + 8, 66, x + 2, 74, x - 6, 68], TITANIUM);
     ctx.fillStyle = '#132334';ctx.beginPath();ctx.arc(x, 43, 10, 0, TAU);ctx.fill();
     ctx.strokeStyle = '#ccb98c';ctx.lineWidth = 2.4;ctx.stroke();
-    ctx.strokeStyle = '#fff1b8';ctx.lineWidth = .7;ctx.beginPath();ctx.arc(x, 43, 9.8, Math.PI, Math.PI * 1.77);ctx.stroke();
+    if (!compact) { ctx.strokeStyle = '#fff1b8';ctx.lineWidth = .7;ctx.beginPath();ctx.arc(x, 43, 9.8, Math.PI, Math.PI * 1.77);ctx.stroke(); }
     for (let index = 0; index < 6; index++) {
       const angle = index * Math.PI / 3;
       const px = x + Math.cos(angle) * 7.3, py = 43 + Math.sin(angle) * 7.3;
@@ -166,6 +192,7 @@ function weaponPod(ctx: Ctx, weapon: WeaponId, accent: string) {
 }
 
 function ship(ctx: Ctx, module: ModuleId, weapon: WeaponId, moduleColor: string, accent: string) {
+  const compact = compactContexts.has(ctx);
   // Graphite keel and ceramic outer plates keep a bright, recognizable player silhouette.
   plate(ctx, [44, 4, 50, 17, 56, 42, 67, 57, 71, 81, 54, 80, 49, 96, 39, 96, 34, 80, 17, 81, 21, 57, 32, 42, 38, 17], GRAPHITE);
   mirrored(ctx, 88, () => {
@@ -197,7 +224,11 @@ function ship(ctx: Ctx, module: ModuleId, weapon: WeaponId, moduleColor: string,
   // Canopy remains in the upper fuselage, outside all body attachment footprints.
   plate(ctx, [44, 16, 50, 32, 48, 42, 44, 48, 40, 42, 38, 32], GRAPHITE);
   const glass = ctx.createLinearGradient(39, 19, 48, 42);
-  glass.addColorStop(0, '#f0ffff');glass.addColorStop(.18, '#b6f0f2');glass.addColorStop(.4, accent);glass.addColorStop(.62, '#2c677f');glass.addColorStop(1, '#0b2b42');
+  if (compact) {
+    glass.addColorStop(0, '#b6f0f2');glass.addColorStop(.45, accent);glass.addColorStop(1, '#0b2b42');
+  } else {
+    glass.addColorStop(0, '#f0ffff');glass.addColorStop(.18, '#b6f0f2');glass.addColorStop(.4, accent);glass.addColorStop(.62, '#2c677f');glass.addColorStop(1, '#0b2b42');
+  }
   path(ctx, [44, 18, 48.2, 32, 46.8, 40.5, 44, 44.5, 41.2, 40.5, 39.8, 32]);ctx.fillStyle = glass;ctx.fill();
   seam(ctx, [44, 19, 41.4, 31, 41.7, 38], '#f1ffff', .9);
   seam(ctx, [41, 35, 47, 35], '#143b54', .7);
@@ -268,7 +299,7 @@ function body(ctx: Ctx, model: 'bastion' | 'reactor' | 'siphon', accent: string)
     });
     plate(ctx, [26, 28, 38, 28, 46, 37, 45, 50, 37, 61, 32, 66, 27, 61, 19, 50, 18, 37], GRAPHITE);
     ctx.strokeStyle = '#b7c6ce';ctx.lineWidth = 3;ctx.beginPath();ctx.arc(32, 43, 13.5, 0, TAU);ctx.stroke();
-    ctx.strokeStyle = '#f4e0b2';ctx.lineWidth = .65;ctx.beginPath();ctx.arc(32, 43, 15.4, Math.PI * .85, Math.PI * 1.88);ctx.stroke();
+    if (!compactContexts.has(ctx)) { ctx.strokeStyle = '#f4e0b2';ctx.lineWidth = .65;ctx.beginPath();ctx.arc(32, 43, 15.4, Math.PI * .85, Math.PI * 1.88);ctx.stroke(); }
     for (let index = 0; index < 6; index++) {
       const a = index * Math.PI / 3;
       ctx.save();ctx.translate(32 + Math.cos(a) * 13.5, 43 + Math.sin(a) * 13.5);ctx.rotate(a);
@@ -327,21 +358,25 @@ function drone(ctx: Ctx, model: 'striker' | 'frost' | 'mender', accent: string) 
     ctx.strokeStyle = '#8cb6ad';ctx.lineWidth = 2.2;ctx.beginPath();ctx.arc(24, 27, 10.5, 0, TAU);ctx.stroke();
     ctx.fillStyle = '#10352f';ctx.beginPath();ctx.arc(24, 27, 8.5, 0, TAU);ctx.fill();
     ctx.fillStyle = accent;path(ctx, [22, 20, 26, 20, 26, 25, 31, 25, 31, 29, 26, 29, 26, 34, 22, 34, 22, 29, 17, 29, 17, 25, 22, 25]);ctx.fill();
-    ctx.fillStyle = '#eaffed';ctx.fillRect(23, 26, 2, 2);
+    if (!compactContexts.has(ctx)) { ctx.fillStyle = '#eaffed';ctx.fillRect(23, 26, 2, 2); }
     thruster(ctx, 20, 41, 8, 6, accent);
   }
 }
 
-/** Stable keys and dimensions match the existing scene attachment transforms. */
+/** Both detail levels retain the same frame sizes and centered attachment anchors. */
 export function makeShipTextures(scene: Phaser.Scene) {
   const bake = (key: string, width: number, height: number, draw: (ctx: Ctx) => void) => {
-    if (scene.textures.exists(key)) scene.textures.remove(key);
-    const texture = scene.textures.createCanvas(key, width * 2, height * 2)!;
-    const ctx = texture.context;
-    ctx.scale(2, 2);
-    ctx.lineCap = 'butt';ctx.lineJoin = 'bevel';
-    draw(ctx);
-    texture.refresh();
+    for (const compact of [false, true]) {
+      const textureKey = compact ? `${key}-compact` : key;
+      if (scene.textures.exists(textureKey)) scene.textures.remove(textureKey);
+      const texture = scene.textures.createCanvas(textureKey, width * 2, height * 2)!;
+      const ctx = texture.context;
+      if (compact) compactContexts.add(ctx);
+      ctx.scale(2, 2);
+      ctx.lineCap = 'butt';ctx.lineJoin = 'bevel';
+      draw(ctx);
+      texture.refresh();
+    }
   };
   for (const module of MODULES) for (const weapon of Object.keys(WEAPON_BASES) as WeaponId[]) {
     bake(`ship-${module.id}-${weapon}`, 88, 104, ctx => ship(ctx, module.id, weapon, hex(module.color), hex(WEAPON_BASES[weapon].color)));

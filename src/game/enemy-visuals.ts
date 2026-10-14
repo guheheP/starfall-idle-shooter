@@ -15,23 +15,30 @@ const ELITE_COLOR: Record<EliteId, number> = { vanguard: 0xffa35f, sniper: 0xff8
 
 /** Reusable hard-surface drawing. Apertures have bright interiors and dark bezels, without baked bloom. */
 class HullPainter {
-  constructor(private ctx: CanvasRenderingContext2D, private style: HullStyle) { }
+  constructor(private ctx: CanvasRenderingContext2D, private style: HullStyle, readonly compact = false) { }
 
   plate(points: Point[], light = this.style.light, mid = this.style.mid, dark = this.style.dark): void {
     const ctx = this.ctx;
     const xs = points.map(point => point[0]), ys = points.map(point => point[1]);
     const metal = ctx.createLinearGradient(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys));
-    metal.addColorStop(0, light); metal.addColorStop(.32, mid); metal.addColorStop(.37, mid);
-    metal.addColorStop(.39, light); metal.addColorStop(.52, mid); metal.addColorStop(1, dark);
+    metal.addColorStop(0, light);
+    if (this.compact) metal.addColorStop(.55, mid);
+    else {
+      metal.addColorStop(.32, mid); metal.addColorStop(.37, mid);
+      metal.addColorStop(.39, light); metal.addColorStop(.52, mid);
+    }
+    metal.addColorStop(1, dark);
     ctx.beginPath(); ctx.moveTo(...points[0]);
     for (const point of points.slice(1)) ctx.lineTo(...point);
     ctx.closePath(); ctx.fillStyle = metal; ctx.fill();
-    ctx.strokeStyle = '#091421'; ctx.lineWidth = 1.6; ctx.lineJoin = 'round'; ctx.stroke();
+    ctx.strokeStyle = '#091421'; ctx.lineWidth = this.compact ? 1.8 : 1.6; ctx.lineJoin = 'round'; ctx.stroke();
+    if (this.compact) return;
     ctx.beginPath(); ctx.moveTo(...points[0]); ctx.lineTo(...points[1]);
     ctx.strokeStyle = '#e0e9e9'; ctx.globalAlpha = .75; ctx.lineWidth = .7; ctx.stroke(); ctx.globalAlpha = 1;
   }
 
   line(points: Point[], color = '#14222d', width = 1): void {
+    if (this.compact && width < 1.2) return;
     const ctx = this.ctx;
     ctx.beginPath(); ctx.moveTo(...points[0]); for (const point of points.slice(1)) ctx.lineTo(...point);
     ctx.strokeStyle = color; ctx.lineWidth = width; ctx.stroke();
@@ -40,12 +47,14 @@ class HullPainter {
   vent(x: number, y: number, width: number, count: number): void {
     const ctx = this.ctx;
     ctx.fillStyle = '#091622'; ctx.fillRect(x - 1, y - 1, width + 2, count * 2.5 + 1);
+    if (this.compact) return;
     for (let index = 0; index < count; index++) {
       ctx.fillStyle = index === 0 ? '#bdcfce' : '#536370'; ctx.fillRect(x, y + index * 2.5, width, .8);
     }
   }
 
   bolt(x: number, y: number): void {
+    if (this.compact) return;
     const ctx = this.ctx;
     ctx.fillStyle = '#0b1724'; ctx.beginPath(); ctx.arc(x, y, 1.35, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#c6d4d6'; ctx.fillRect(x - .55, y - .7, .8, .65);
@@ -54,17 +63,21 @@ class HullPainter {
   aperture(x: number, y: number, width: number, height: number, color = this.style.energy): void {
     const ctx = this.ctx;
     ctx.fillStyle = '#07121f'; ctx.fillRect(x - width / 2 - 1.5, y - height / 2 - 1.5, width + 3, height + 3);
-    ctx.strokeStyle = '#718190'; ctx.lineWidth = .65; ctx.strokeRect(x - width / 2 - 1, y - height / 2 - 1, width + 2, height + 2);
+    if (!this.compact) {
+      ctx.strokeStyle = '#718190'; ctx.lineWidth = .65; ctx.strokeRect(x - width / 2 - 1, y - height / 2 - 1, width + 2, height + 2);
+    }
     ctx.fillStyle = color; ctx.fillRect(x - width / 2, y - height / 2, width, height);
+    if (this.compact) return;
     ctx.fillStyle = '#fff1d0'; ctx.fillRect(x - width / 2 + .6, y - height / 2 + .5, Math.max(.8, width * .25), Math.max(1, height - 1));
   }
 
   core(x: number, y: number, radius: number, color = this.style.energy): void {
     const ctx = this.ctx;
     ctx.fillStyle = '#0a1622'; ctx.beginPath(); ctx.arc(x, y, radius + 2, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = '#afbbc0'; ctx.lineWidth = .8; ctx.stroke();
-    ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke();
-    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, radius * .53, 0, Math.PI * 2); ctx.fill();
+    if (!this.compact) { ctx.strokeStyle = '#afbbc0'; ctx.lineWidth = .8; ctx.stroke(); }
+    ctx.strokeStyle = color; ctx.lineWidth = this.compact ? 1.6 : 1; ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, radius * (this.compact ? .65 : .53), 0, Math.PI * 2); ctx.fill();
+    if (this.compact) return;
     ctx.fillStyle = '#fff5dd'; ctx.fillRect(x - .9, y - 1.5, 1.8, 1.8);
   }
 }
@@ -83,7 +96,7 @@ function drawScout(ctx: CanvasRenderingContext2D, paint: HullPainter): void {
   paint.aperture(11, 7, 3.5, 2.2); paint.aperture(37, 7, 3.5, 2.2);
   paint.aperture(24, 45, 3.2, 3);
   paint.bolt(11, 28); paint.bolt(37, 28);
-  ctx.fillStyle = '#eed7b1'; ctx.fillRect(22, 20, 4, 1);
+  if (!paint.compact) { ctx.fillStyle = '#eed7b1'; ctx.fillRect(22, 20, 4, 1); }
 }
 
 function drawFighter(ctx: CanvasRenderingContext2D, paint: HullPainter): void {
@@ -104,7 +117,7 @@ function drawFighter(ctx: CanvasRenderingContext2D, paint: HullPainter): void {
   paint.vent(11, 18, 5, 4); paint.vent(56, 18, 5, 4);
   paint.line([[28, 44], [36, 49], [44, 44]], '#f3c5ad', .8);
   paint.bolt(10, 10); paint.bolt(62, 10);
-  ctx.fillStyle = '#bf9b8c'; ctx.fillRect(34, 51, 4, 1.4);
+  if (!paint.compact) { ctx.fillStyle = '#bf9b8c'; ctx.fillRect(34, 51, 4, 1.4); }
 }
 
 function drawTank(_ctx: CanvasRenderingContext2D, paint: HullPainter): void {
@@ -157,7 +170,9 @@ function drawElite(ctx: CanvasRenderingContext2D, paint: HullPainter, kind: Hull
       paint.line([[x, cy - 6], [x, h - 14]], color, .85);
     }
     paint.core(cx, cy - 12, Math.max(2.2, w * .045), color);
-    ctx.fillStyle = '#dba6ce'; ctx.fillRect(cx - w * .11, cy - 10, w * .04, 1); ctx.fillRect(cx + w * .07, cy - 10, w * .04, 1);
+    if (!paint.compact) {
+      ctx.fillStyle = '#dba6ce'; ctx.fillRect(cx - w * .11, cy - 10, w * .04, 1); ctx.fillRect(cx + w * .07, cy - 10, w * .04, 1);
+    }
   } else {
     // Two proud three-cell pods replace the thin wing shapes with a broad, layered silhouette.
     for (const side of [-1, 1]) {
@@ -172,22 +187,25 @@ function drawElite(ctx: CanvasRenderingContext2D, paint: HullPainter, kind: Hull
   }
 }
 
-/** Twelve two-times-resolution textures; frame sizes and centered anchors match the existing runtime. */
+/** Full and compact two-times-resolution hulls share frame sizes and centered anchors. */
 export function makeEnemyTextures(scene: Phaser.Scene): void {
   for (const kind of ['scout', 'fighter', 'tank'] as const) {
     const style = HULLS[kind];
     for (const elite of [undefined, 'vanguard', 'sniper', 'barrage'] as const) {
-      const key = elite ? `${kind}-elite-${elite}` : `${kind}-metal`;
-      if (scene.textures.exists(key)) continue;
-      const texture = scene.textures.createCanvas(key, style.width * 2, style.height * 2);
-      if (!texture) continue;
-      const ctx = texture.context;
-      ctx.scale(2, 2); const paint = new HullPainter(ctx, style);
-      if (kind === 'scout') drawScout(ctx, paint);
-      else if (kind === 'fighter') drawFighter(ctx, paint);
-      else drawTank(ctx, paint);
-      if (elite) drawElite(ctx, paint, kind, elite);
-      texture.refresh();
+      const baseKey = elite ? `${kind}-elite-${elite}` : `${kind}-metal`;
+      for (const compact of [false, true]) {
+        const key = compact ? `${baseKey}-compact` : baseKey;
+        if (scene.textures.exists(key)) continue;
+        const texture = scene.textures.createCanvas(key, style.width * 2, style.height * 2);
+        if (!texture) continue;
+        const ctx = texture.context;
+        ctx.scale(2, 2); const paint = new HullPainter(ctx, style, compact);
+        if (kind === 'scout') drawScout(ctx, paint);
+        else if (kind === 'fighter') drawFighter(ctx, paint);
+        else drawTank(ctx, paint);
+        if (elite) drawElite(ctx, paint, kind, elite);
+        texture.refresh();
+      }
     }
   }
 }

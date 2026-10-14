@@ -13,6 +13,7 @@ import { makeShipTextures } from './ship-visuals';
 import { makeEnemyTextures, EnemyVisuals } from './enemy-visuals';
 import { drawProjectiles } from './projectile-visuals';
 import { DestructionVisuals } from './destruction-visuals';
+import { useCompactHull } from './render-quality';
 import { WORLD_WIDTH as W, WORLD_HEIGHT as H, type Enemy, type GameEvent, type GameInput } from './types';
 
 interface Spark { x: number; y: number; vx: number; vy: number; life: number; max: number; color: number; size: number; }
@@ -26,6 +27,8 @@ export class SpaceScene extends Phaser.Scene {
   private background!: Phaser.GameObjects.Image;
   private viewWidth = W;
   private viewHeight = H;
+  private cssZoom = 1;
+  private compactHulls = false;
   private stars!: Phaser.GameObjects.Graphics;
   private effects!: Phaser.GameObjects.Graphics;
   private combatVisuals!: CombatVisuals;
@@ -186,6 +189,9 @@ export class SpaceScene extends Phaser.Scene {
     this.clearGameplayInput();
     const width=Math.max(1,size.width), height=Math.max(1,size.height);
     const zoom=Math.min(width/W,height/H);
+    // The camera uses backing pixels; detail and labels follow the visible size.
+    this.cssZoom=Math.min(this.scale.displaySize.width/W,this.scale.displaySize.height/H);
+    this.compactHulls=useCompactHull(this.cssZoom);
     this.cameras.main.setSize(width,height).setZoom(zoom).centerOn(W/2,H/2);
     this.viewWidth=width/zoom;
     this.viewHeight=height/zoom;
@@ -195,6 +201,10 @@ export class SpaceScene extends Phaser.Scene {
   private fitBackground() {
     const texture=this.background.texture.getSourceImage();
     this.background.setScale(Math.max(this.viewWidth/texture.width,this.viewHeight/texture.height));
+  }
+
+  private hullTexture(key: string): string {
+    return this.compactHulls ? `${key}-compact` : key;
   }
 
   update(_time: number, delta: number) {
@@ -333,7 +343,7 @@ export class SpaceScene extends Phaser.Scene {
     const p=this.sim.player;
     const module=MODULES.find(item=>item.id===this.sim.state.module)!;
     const color=WEAPON_BASES[this.sim.state.weapon].color;
-    const texture=`ship-${module.id}-${this.sim.state.weapon}`;
+    const texture=this.hullTexture(`ship-${module.id}-${this.sim.state.weapon}`);
     const wing=this.sim.getEquippedPart('wing'),body=this.sim.getEquippedPart('body'),drone=this.sim.getEquippedPart('drone');
     const bodyColor=PART_BASES[body.model].color,droneColor=PART_BASES[drone.model].color;
     const stats=this.sim.getStats();
@@ -347,7 +357,7 @@ export class SpaceScene extends Phaser.Scene {
     this.previousX=p.x;
     const hullAlpha=p.invulnerable>0&&full&&Math.sin(this.elapsed*30)>0?.55:1;
     this.playerImage.setAlpha(hullAlpha);
-    const wingTexture=`part-wing-${wing.model}`,bodyTexture=`part-body-${body.model}`;
+    const wingTexture=this.hullTexture(`part-wing-${wing.model}`),bodyTexture=this.hullTexture(`part-body-${body.model}`);
     if(this.wingImage.texture.key!==wingTexture)this.wingImage.setTexture(wingTexture);
     if(this.bodyImage.texture.key!==bodyTexture)this.bodyImage.setTexture(bodyTexture);
     this.wingImage.setVisible(!recovering).setPosition(p.x,p.y+3).setRotation(this.playerImage.rotation).setAlpha(hullAlpha);
@@ -428,11 +438,11 @@ export class SpaceScene extends Phaser.Scene {
     if(p.invulnerable>0){this.exhaust.lineStyle(1.5,module.color,.6);this.exhaust.strokeCircle(p.x,p.y,13);}
     const count=Math.min(4,Math.max(0,Math.floor(stats.droneCount)));
     while(this.droneImages.length>count)this.droneImages.pop()!.destroy();
-    while(this.droneImages.length<count)this.droneImages.push(this.add.image(p.x,p.y,`part-drone-${drone.model}`).setScale(.34).setDepth(9.3));
+    while(this.droneImages.length<count)this.droneImages.push(this.add.image(p.x,p.y,this.hullTexture(`part-drone-${drone.model}`)).setScale(.34).setDepth(9.3));
     for(let i=0;i<count;i++){
       const offset=(i%2===0?-1:1)*(67+Math.floor(i/2)*29);
       const y=p.y+20+(full?Math.sin(this.elapsed*2+i)*7:0),x=p.x+offset;
-      const image=this.droneImages[i],key=`part-drone-${drone.model}`;
+      const image=this.droneImages[i],key=this.hullTexture(`part-drone-${drone.model}`);
       if(image.texture.key!==key)image.setTexture(key);
       image.setVisible(true).setPosition(x,y).setRotation(full?Math.sin(this.elapsed*1.5+i)*.05:0);
       if(full){
@@ -455,10 +465,11 @@ export class SpaceScene extends Phaser.Scene {
     const full=this.sim.state.effects&&!this.reducedMotion;
     for(const enemy of this.sim.enemies){
       alive.add(enemy.id);
+      const texture=this.hullTexture(enemy.kind==='boss'?bossTexture(enemy):enemy.elite?`${enemy.kind}-elite-${enemy.elite}`:`${enemy.kind}-metal`);
       let view=this.enemyViews.get(enemy.id);
       if(!view){
         const glow=this.add.image(enemy.x,enemy.y,'glow').setAlpha(.13).setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
-        const image=this.add.image(enemy.x,enemy.y,enemy.kind==='boss'?bossTexture(enemy):enemy.elite?`${enemy.kind}-elite-${enemy.elite}`:`${enemy.kind}-metal`).setDepth(5);
+        const image=this.add.image(enemy.x,enemy.y,texture).setDepth(5);
         const scale=enemy.kind==='boss'?1.12:enemy.kind==='scout'?1.02:enemy.kind==='tank'?1.02:.98;
         image.setScale(scale*(enemy.elite?.54:.5));glow.setScale(enemy.kind==='boss'?2.8:enemy.elite?1.1:.8);
         view={image,glow};this.enemyViews.set(enemy.id,view);
@@ -466,7 +477,7 @@ export class SpaceScene extends Phaser.Scene {
         else if(enemy.elite)view.label=this.add.text(enemy.x,enemy.y-45,ELITES[enemy.elite].name.replace('精鋭',''),{fontFamily:'Noto Sans JP, sans-serif',fontSize:'10px',color:`#${ELITES[enemy.elite].color.toString(16).padStart(6,'0')}`,stroke:'#07121e',strokeThickness:3}).setOrigin(.5).setDepth(6);
       }
       view.image.setPosition(enemy.x,enemy.y).clearTint();
-      if(enemy.kind==='boss'&&view.image.texture.key!==bossTexture(enemy))view.image.setTexture(bossTexture(enemy));
+      if(view.image.texture.key!==texture)view.image.setTexture(texture);
       view.image.setRotation(enemy.kind!=='tank'&&enemy.kind!=='boss'&&full?Math.cos(enemy.age*.7+enemy.id)*.05:0);
       const phase=enemy.phase??1;
       const accent=enemy.elite?ELITES[enemy.elite].color:enemy.kind==='boss'&&enemy.pattern==='spiral'?0xbd9fed:enemy.kind==='boss'&&enemy.pattern==='cross'?0x86deca:enemy.kind==='tank'?0xffd08a:0xff9673;
@@ -485,7 +496,7 @@ export class SpaceScene extends Phaser.Scene {
       if(enemy.kind!=='boss'&&(enemy.elite||enemy.hp<enemy.maxHp))this.drawHealth(enemy);
       this.drawTelegraph(enemy,accent);
       if(enemy.elite){
-        view.label?.setVisible(this.cameras.main.zoom>=.45).setPosition(enemy.x,enemy.y-enemy.radius-27);
+        view.label?.setVisible(this.cssZoom>=.45).setPosition(enemy.x,enemy.y-enemy.radius-27);
         this.bars.lineStyle(1,accent,.45);
         if(enemy.elite==='vanguard'){
           this.bars.strokePoints([new Phaser.Geom.Point(enemy.x-enemy.radius-5,enemy.y-6),new Phaser.Geom.Point(enemy.x,enemy.y+enemy.radius+8),new Phaser.Geom.Point(enemy.x+enemy.radius+5,enemy.y-6)],false);
@@ -516,7 +527,7 @@ export class SpaceScene extends Phaser.Scene {
             for(let i=0;i<3;i++){const a=this.elapsed*.4+i*Math.PI*2/3;this.bars.beginPath();this.bars.arc(enemy.x,enemy.y,phase===2?64:58,a,a+1.2,false);this.bars.strokePath();}
           }else this.bars.strokeEllipse(enemy.x,enemy.y,237,118);
         }
-        view.label?.setVisible(this.cameras.main.zoom>=.45).setPosition(enemy.x,enemy.y-96).setText(`${{fan:'WARDEN',spiral:'HELIX',cross:'BASTION'}[enemy.pattern??'fan']}  /  PHASE ${phase}`);
+        view.label?.setVisible(this.cssZoom>=.45).setPosition(enemy.x,enemy.y-96).setText(`${{fan:'WARDEN',spiral:'HELIX',cross:'BASTION'}[enemy.pattern??'fan']}  /  PHASE ${phase}`);
       }else if(full){
         const width=enemy.kind==='tank'?21:enemy.kind==='fighter'?13:8;
         for(const side of [-1,1]){

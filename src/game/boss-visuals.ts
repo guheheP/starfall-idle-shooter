@@ -11,21 +11,28 @@ export function bossCoreNodes(enemy: Enemy): { x: number; y: number; radius: num
   return [center, ...[-1, 1].map(side => ({ x: enemy.x + side * 90.72, y: enemy.y - 22.4, radius: 13 }))];
 }
 
-/** Three mechanical silhouettes, with opened armor in phase two. Combat bounds stay in the simulation. */
+/** Full and compact versions share each silhouette and its opened phase-two armor. */
 export function makeBossTextures(scene: Phaser.Scene): void {
-  for (const pattern of ['fan', 'spiral', 'cross'] as const) for (const phase of [1, 2]) {
-    const texture = scene.textures.createCanvas(`flagship-${pattern}-${phase}`, 460, 264)!;
+  for (const pattern of ['fan', 'spiral', 'cross'] as const) for (const phase of [1, 2]) for (const compact of [false, true]) {
+    const baseKey = `flagship-${pattern}-${phase}`;
+    const key = compact ? `${baseKey}-compact` : baseKey;
+    if (scene.textures.exists(key)) continue;
+    const texture = scene.textures.createCanvas(key, 460, 264);
+    if (!texture) continue;
     const ctx = texture.context;
     ctx.scale(2, 2);
     const hot = phase === 2;
     const accent = pattern === 'fan' ? '#ffc27c' : pattern === 'spiral' ? '#c1a3ff' : '#79e0ce';
     const plate = (points: number[], light = '#a9bbc6', dark = '#263849') => {
       const fill = ctx.createLinearGradient(0, 8, 230, 130);
-      fill.addColorStop(0, light); fill.addColorStop(.33, dark); fill.addColorStop(.49, light); fill.addColorStop(1, dark);
+      fill.addColorStop(0, light);
+      if (!compact) { fill.addColorStop(.33, dark); fill.addColorStop(.49, light); }
+      fill.addColorStop(1, dark);
       ctx.beginPath(); ctx.moveTo(points[0], points[1]);
       for (let index = 2; index < points.length; index += 2) ctx.lineTo(points[index], points[index + 1]);
       ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
-      ctx.strokeStyle = '#101c2a'; ctx.lineWidth = 1.6; ctx.stroke();
+      ctx.strokeStyle = '#101c2a'; ctx.lineWidth = compact ? 1.8 : 1.6; ctx.stroke();
+      if (compact) return;
       ctx.beginPath(); ctx.moveTo(points[0], points[1]); ctx.lineTo(points[2], points[3]); ctx.lineTo(points[4], points[5]);
       ctx.strokeStyle = '#dcecf2'; ctx.lineWidth = .7; ctx.stroke();
     };
@@ -33,10 +40,12 @@ export function makeBossTextures(scene: Phaser.Scene): void {
       ctx.save(); ctx.shadowColor = accent; ctx.shadowBlur = hot ? 12 : 7;
       ctx.fillStyle = '#0b1728'; ctx.beginPath(); ctx.arc(x, y, radius + 3, 0, Math.PI * 2); ctx.fill();
       ctx.strokeStyle = '#b1c0cc'; ctx.lineWidth = 2.8; ctx.stroke();
-      ctx.shadowBlur = 0; ctx.strokeStyle = accent; ctx.lineWidth = 1.1;
+      ctx.shadowBlur = 0; ctx.strokeStyle = accent; ctx.lineWidth = compact ? 1.8 : 1.1;
       ctx.beginPath(); ctx.arc(x, y, radius, 0, Math.PI * 2); ctx.stroke();
       const light = ctx.createRadialGradient(x - 2, y - 2, 0, x, y, radius);
-      light.addColorStop(0, '#fff6eb'); light.addColorStop(.22, accent); light.addColorStop(.75, accent); light.addColorStop(1, '#293542');
+      light.addColorStop(0, '#fff6eb'); light.addColorStop(compact ? .4 : .22, accent);
+      if (!compact) light.addColorStop(.75, accent);
+      light.addColorStop(1, '#293542');
       ctx.fillStyle = light; ctx.beginPath(); ctx.arc(x, y, radius * .66, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
     };
@@ -45,6 +54,7 @@ export function makeBossTextures(scene: Phaser.Scene): void {
       ctx.fillStyle = accent; ctx.fillRect(x, y, vertical ? 2 : length, vertical ? length : 2);
     };
     const bolts = (points: [number, number][]) => {
+      if (compact) return;
       for (const [x, y] of points) {
         ctx.fillStyle = '#071423'; ctx.beginPath(); ctx.arc(x, y, 1.8, 0, Math.PI * 2); ctx.fill();
         ctx.fillStyle = '#bdcdd1'; ctx.fillRect(x - .7, y - .8, 1.4, 1);
@@ -83,10 +93,12 @@ export function makeBossTextures(scene: Phaser.Scene): void {
         ctx.beginPath(); ctx.moveTo(-3 - shift, -52); ctx.quadraticCurveTo(18, -54, 28, -36); ctx.stroke();
         ctx.restore();
       }
-      for (let index = 0; index < 12; index++) {
-        const angle = index * Math.PI / 6;
+      const reactorMarks = compact ? 6 : 12;
+      for (let index = 0; index < reactorMarks; index++) {
+        const angle = index * Math.PI * 2 / reactorMarks;
         ctx.save(); ctx.translate(115, 67); ctx.rotate(angle);
-        ctx.fillStyle = index % 3 ? '#52677c' : accent; ctx.fillRect(31, -2, hot ? 8 : 5, 3); ctx.restore();
+        ctx.fillStyle = index % (compact ? 2 : 3) ? '#52677c' : accent;
+        ctx.fillRect(31, -2, hot ? 8 : 5, compact ? 4 : 3); ctx.restore();
       }
       if (hot) {
         ctx.strokeStyle = accent; ctx.lineWidth = 2;

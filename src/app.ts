@@ -7,6 +7,7 @@ import { ProgressStore, PROGRESS_ACTIVE_KEY, INITIAL_RESET_GENERATION,
   type ProgressSnapshot, type ProgressStorage } from './game/progress-store';
 import { WORLD_WIDTH, WORLD_HEIGHT } from './game/types';
 import { notificationForEvent } from './game/notifications';
+import { chooseRenderViewport } from './game/render-quality';
 import { setupUI } from './ui';
 
 interface Runtime {
@@ -84,10 +85,14 @@ export function startGameApplication(storage: ProgressStorage) {
       try { session.save(); } catch { reportStorageError(); }
     };
     save();
+    const canvasHost = document.querySelector<HTMLElement>('#game-canvas')!;
+    const initialBounds = canvasHost.getBoundingClientRect();
+    const initialViewport = chooseRenderViewport(initialBounds.width || WORLD_WIDTH,
+      initialBounds.height || WORLD_HEIGHT, window.devicePixelRatio);
     const game = new Phaser.Game({
-      type: Phaser.AUTO, parent: 'game-canvas', width: WORLD_WIDTH, height: WORLD_HEIGHT,
+      type: Phaser.AUTO, parent: 'game-canvas', width: initialViewport.backingWidth, height: initialViewport.backingHeight,
       backgroundColor: '#070f1d', antialias: true, transparent: false,
-      scale: { mode: Phaser.Scale.RESIZE, autoCenter: Phaser.Scale.NO_CENTER },
+      scale: { mode: Phaser.Scale.NONE, zoom: initialViewport.scaleZoom, autoCenter: Phaser.Scale.NO_CENTER },
       fps: { target: 60, forceSetTimeOut: false },
       scene: [new SpaceScene(sim, audio, event => {
         if (!live || disposed) return;
@@ -96,13 +101,37 @@ export function startGameApplication(storage: ProgressStorage) {
         if (['wave', 'achievement', 'mastery', 'module', 'loot', 'inventory', 'collection'].includes(event.kind)) save();
       })],
     });
-    const canvasHost = document.querySelector<HTMLElement>('#game-canvas')!;
+    const resizeRendering = (width: number, height: number) => {
+      if (!live || disposed || !game.isBooted || width <= 0 || height <= 0) return;
+      const viewport = chooseRenderViewport(width, height, window.devicePixelRatio);
+      if (game.scale.width === viewport.backingWidth && game.scale.height === viewport.backingHeight
+        && game.scale.zoom === viewport.scaleZoom) return;
+      // Final setZoom resets CSS sizing even when a display changes from DPR 2 to 1.
+      // Phaser's displayScale keeps pointer coordinates aligned with the backing canvas.
+      game.scale.resize(viewport.backingWidth, viewport.backingHeight).setZoom(viewport.scaleZoom);
+    };
+    const resizeFromHost = () => {
+      const { width, height } = canvasHost.getBoundingClientRect();
+      resizeRendering(width, height);
+    };
     const canvasResize = new ResizeObserver(entries => {
       if (!live || disposed) return;
       const { width, height } = entries[0].contentRect;
-      if (width > 0 && height > 0) game.scale.resize(Math.round(width), Math.round(height));
+      resizeRendering(width, height);
     });
     canvasResize.observe(canvasHost);
+    game.events.once(Phaser.Core.Events.READY, resizeFromHost);
+    window.addEventListener('resize', resizeFromHost);
+    window.addEventListener('orientationchange', resizeFromHost);
+    let densityQuery: MediaQueryList | null = null;
+    const watchDensity = () => {
+      densityQuery?.removeEventListener('change', onDensityChange);
+      const density = Number.isFinite(window.devicePixelRatio) && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
+      densityQuery = window.matchMedia(`(resolution: ${density}dppx)`);
+      densityQuery.addEventListener('change', onDensityChange);
+    };
+    const onDensityChange = () => { watchDensity(); resizeFromHost(); };
+    watchDensity();
     const renderTimer = window.setInterval(() => { if (live && !disposed) ui.render(); }, 120);
     const saveTimer = window.setInterval(() => { if (!document.hidden) save(); }, 5000);
     const onVisibility = () => {
@@ -111,7 +140,10 @@ export function startGameApplication(storage: ProgressStorage) {
         if (!store.isCurrent(snapshot.generation)) { refresh(); return; }
         if (document.hidden) session.hide(); else session.resume();
       } catch { reportStorageError(); }
-      if (live) ui.render();
+      if (live) {
+        if (!document.hidden) resizeFromHost();
+        ui.render();
+      }
     };
     const onGesture = () => {
       if (!live || disposed) return;
@@ -131,6 +163,10 @@ export function startGameApplication(storage: ProgressStorage) {
         live = false;
         clearInterval(renderTimer); clearInterval(saveTimer);
         canvasResize.disconnect();
+        game.events.off(Phaser.Core.Events.READY, resizeFromHost);
+        window.removeEventListener('resize', resizeFromHost);
+        window.removeEventListener('orientationchange', resizeFromHost);
+        densityQuery?.removeEventListener('change', onDensityChange);
         document.removeEventListener('visibilitychange', onVisibility);
         document.removeEventListener('pointerdown', onGesture);
         window.removeEventListener('pagehide', save);
