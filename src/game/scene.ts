@@ -53,6 +53,8 @@ export class SpaceScene extends Phaser.Scene {
   private trailTimer = 0;
   private starData = Array.from({length: 130}, () => ({x:Math.random()*W, y:Math.random()*H, z:0.2+Math.random()*0.8}));
   private keys = new Set<string>();
+  private pointerGesture: Phaser.Input.Pointer | null = null;
+  private touchDrag: { x: number; y: number; playerX: number; playerY: number } | null = null;
   private accumulator = 0;
   private elapsed = 0;
   private previousX = W / 2;
@@ -61,10 +63,11 @@ export class SpaceScene extends Phaser.Scene {
   private reducedMotion = this.motionPreference.matches;
   private onMotionPreferenceChange = (event: MediaQueryListEvent) => { this.reducedMotion = event.matches; };
   private onVisibilityChange = () => {
-    if (document.hidden) this.keys.clear();
-    this.tweens.paused = this.sim.paused || document.hidden;
+    if (this.inputBlocked()) this.clearGameplayInput();
+    this.tweens.paused = this.inputBlocked();
   };
   private onKeyDown = (event: KeyboardEvent) => {
+    if (this.inputBlocked()) { this.clearGameplayInput(); return; }
     if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
     const active = document.activeElement;
     if (active instanceof HTMLElement && (active.closest('dialog[open]') || /INPUT|TEXTAREA|SELECT/.test(active.tagName))) return;
@@ -81,7 +84,32 @@ export class SpaceScene extends Phaser.Scene {
     this.audio.unlock();
   };
   private onKeyUp = (event: KeyboardEvent) => { this.keys.delete(event.key.toLowerCase()); };
-  private onBlur = () => this.keys.clear();
+  private onBlur = () => this.clearGameplayInput();
+  private onPointerDown = (pointer: Phaser.Input.Pointer) => {
+    if (this.inputBlocked()) { this.clearGameplayInput(); return; }
+    this.pointerGesture = pointer;
+    const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+    this.touchDrag = pointer.wasTouch ? { x: world.x, y: world.y, playerX: this.sim.player.x, playerY: this.sim.player.y } : null;
+    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+    this.audio.enabled = this.sim.state.sound;
+    this.audio.unlock();
+  };
+  private onPointerUp = (pointer: Phaser.Input.Pointer) => {
+    if (this.pointerGesture !== pointer) return;
+    this.pointerGesture = null;
+    this.touchDrag = null;
+  };
+
+  private inputBlocked(): boolean {
+    return this.sim.paused || document.hidden || document.querySelector('dialog[open]') !== null;
+  }
+
+  private clearGameplayInput(): void {
+    this.keys.clear();
+    // A held pointer needs a fresh canvas press after a menu, blur, or resize.
+    this.pointerGesture = null;
+    this.touchDrag = null;
+  }
 
   constructor(private sim: Simulation, private audio: GameAudio, private notify: (event:GameEvent) => void) {
     super({key:'Space'});
@@ -132,17 +160,18 @@ export class SpaceScene extends Phaser.Scene {
     window.addEventListener('blur', this.onBlur);
     document.addEventListener('visibilitychange', this.onVisibilityChange);
     this.motionPreference.addEventListener('change', this.onMotionPreferenceChange);
-    this.input.on('pointerdown', () => {
-      if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
-      this.audio.enabled = this.sim.state.sound;
-      this.audio.unlock();
-    });
+    this.input.on(Phaser.Input.Events.POINTER_DOWN, this.onPointerDown);
+    this.input.on(Phaser.Input.Events.POINTER_UP, this.onPointerUp);
+    this.input.on(Phaser.Input.Events.POINTER_UP_OUTSIDE, this.onPointerUp);
     let detached = false;
     const detach = () => {
       if(detached)return;
       detached = true;
-      this.keys.clear();
+      this.clearGameplayInput();
       this.scale.off(Phaser.Scale.Events.RESIZE, this.fitViewport, this);
+      this.input.off(Phaser.Input.Events.POINTER_DOWN, this.onPointerDown);
+      this.input.off(Phaser.Input.Events.POINTER_UP, this.onPointerUp);
+      this.input.off(Phaser.Input.Events.POINTER_UP_OUTSIDE, this.onPointerUp);
       window.removeEventListener('keydown', this.onKeyDown);
       window.removeEventListener('keyup', this.onKeyUp);
       window.removeEventListener('blur', this.onBlur);
@@ -154,6 +183,7 @@ export class SpaceScene extends Phaser.Scene {
   }
 
   private fitViewport(size: Phaser.Structs.Size) {
+    this.clearGameplayInput();
     const width=Math.max(1,size.width), height=Math.max(1,size.height);
     const zoom=Math.min(width/W,height/H);
     this.cameras.main.setSize(width,height).setZoom(zoom).centerOn(W/2,H/2);
@@ -168,20 +198,24 @@ export class SpaceScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number) {
-    this.tweens.paused = this.sim.paused || document.hidden;
-    if(this.sim.paused||document.hidden){this.cameras.main.shakeEffect.reset();this.cameras.main.flashEffect.reset();}
+    const blocked = this.inputBlocked();
+    if (blocked) this.clearGameplayInput();
+    this.tweens.paused = blocked;
+    if(blocked){this.cameras.main.shakeEffect.reset();this.cameras.main.flashEffect.reset();}
     const dt = Math.min(delta / 1000, 0.1);
     this.audio.enabled = this.sim.state.sound;
-    if (!this.sim.paused && !document.hidden) {
+    if (!blocked) {
       this.elapsed += dt;
       const pointer = this.input.activePointer;
       const input: GameInput = {
         x: Number(this.keys.has('d') || this.keys.has('arrowright')) - Number(this.keys.has('a') || this.keys.has('arrowleft')),
         y: Number(this.keys.has('s') || this.keys.has('arrowdown')) - Number(this.keys.has('w') || this.keys.has('arrowup')),
       };
-      if (pointer.isDown && pointer.x>=0 && pointer.x<=this.scale.width && pointer.y>=0 && pointer.y<=this.scale.height) {
+      if (!pointer.isDown) this.onPointerUp(pointer);
+      if (pointer === this.pointerGesture && pointer.isDown && pointer.x>=0 && pointer.x<=this.scale.width && pointer.y>=0 && pointer.y<=this.scale.height) {
         const world=this.cameras.main.getWorldPoint(pointer.x,pointer.y);
-        input.target={x:world.x,y:world.y};
+        // Touch moves relative to the ship so it never snaps underneath a finger.
+        input.target=this.touchDrag ? {x:this.touchDrag.playerX+world.x-this.touchDrag.x,y:this.touchDrag.playerY+world.y-this.touchDrag.y} : {x:world.x,y:world.y};
       }
       this.accumulator += dt;
       while(this.accumulator >= 1/60) {
@@ -211,13 +245,13 @@ export class SpaceScene extends Phaser.Scene {
         this.transientViews.clear();this.rewardCount=0;
       }
     }
-    this.renderStars(this.sim.paused || !fullEffects ? 0 : dt);
+    this.renderStars(blocked || !fullEffects ? 0 : dt);
     const sector=this.sim.getSector();
     const scenery=SECTOR_SCENERY[sector.id];
     const backdrop=this.textures.exists(scenery.key)?scenery.key:this.textures.exists('nebula-art')?'nebula-art':'space-background';
     if(this.background.texture.key!==backdrop){this.background.setTexture(backdrop);this.fitBackground();}
     this.background.setTint(scenery.tint);
-    this.environmentVisuals.render(this.sim.paused||!fullEffects?0:dt,sector,this.viewWidth,this.viewHeight,scenery.painted&&backdrop===scenery.key);
+    this.environmentVisuals.render(blocked||!fullEffects?0:dt,sector,this.viewWidth,this.viewHeight,scenery.painted&&backdrop===scenery.key);
     if(sector.id!==this.lastSector){
       const first=!this.lastSector;this.lastSector=sector.id;
       if(!first&&fullEffects&&this.transientViews.size<92){
@@ -226,12 +260,12 @@ export class SpaceScene extends Phaser.Scene {
         this.tweens.add({targets:label,alpha:1,y:143,duration:300,yoyo:true,hold:1800,onComplete:()=>{this.transientViews.delete(label);label.destroy();}});
       }
     }
-    this.trailTimer-=this.sim.paused?0:dt;
+    this.trailTimer-=blocked?0:dt;
     this.renderPlayer();
     this.renderEnemies();
     this.enemyVisuals.render(this.sim.enemies,this.elapsed,fullEffects);
     this.renderBullets();
-    const effectDt=this.sim.paused||document.hidden?0:dt;
+    const effectDt=blocked?0:dt;
     this.renderEffects(effectDt);
     this.destructionVisuals.render(effectDt,fullEffects);
     this.combatVisuals.render(effectDt,this.sim.bullets,fullEffects);

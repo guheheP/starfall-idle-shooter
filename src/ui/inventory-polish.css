@@ -350,3 +350,190 @@
   .inventory-dialog .inventory-tools-row > .bulk-review-button { min-height: 30px; padding-block: 4px; }
   .inventory-dialog .inspect-scroll { padding-top: 6px; }
 }
+
+/* Phone warehouse: one decision at a time, with readable copy and fixed action rails. */
+@media (max-width: 760px), (max-height: 500px) and (max-width: 1000px) {
+  .inventory-dialog {
+    width: 100vw;
+    height: 100dvh;
+    max-width: none;
+    max-height: 100dvh;
+    margin: 0;
+    padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    border-radius: 0;
+    border-width: 0;
+  }
+  .inventory-dialog .dialog-eyebrow { display: none; }
+  .inventory-dialog h2 { padding-right: 48px; margin: 0 0 10px; min-height: 34px; font-size: 20px; line-height: 1.7; letter-spacing: .06em; }
+  .inventory-dialog .dialog-close { width: 44px; height: 44px; min-width: 44px; min-height: 44px; right: max(5px, env(safe-area-inset-right)); top: max(4px, env(safe-area-inset-top)); font-size: 26px; }
+  .inventory-dialog .dialog-body { display: flex; flex-direction: column; min-height: 0; min-width: 0; gap: 8px; overflow: hidden; }
+  .inventory-dialog .dialog-actions { min-height: 44px; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--inventory-line); }
+  .inventory-dialog .dialog-primary { min-width: 136px; min-height: 44px; padding: 9px 14px; font-size: 14px; line-height: 1.5; white-space: normal; }
+  .inventory-dialog .inventory-return-hint { min-width: 0; font-size: 12px; line-height: 1.5; }
+  .inventory-dialog :is(button, summary, select, input) { font-size: 14px; line-height: 1.4; }
+  .inventory-dialog :is(button, summary, select) { min-height: 44px; }
+  .inventory-dialog button { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+  .inventory-dialog :is(input, select) { font-size: 16px; }
+  .inventory-dialog .inventory-category-tabs { gap: 5px; }
+  .inventory-dialog .inventory-category-tabs button { flex-direction: column; height: auto; min-height: 56px; padding: 6px 3px; gap: 3px; font-size: 13px; line-height: 1.35; }
+  .inventory-dialog .inventory-category-tabs button svg { width: 18px; height: 18px; flex-shrink: 0; }
+  .inventory-dialog .inventory-commandbar { grid-template-columns: minmax(0, 1fr) 112px; gap: 7px; }
+  .inventory-dialog .inventory-commandbar select { height: 44px; padding: 6px 8px; font-size: 16px; }
+  .inventory-dialog .inventory-search { gap: 6px; padding: 0 8px; }
+  .inventory-dialog .inventory-search svg { width: 16px; height: 16px; flex-shrink: 0; }
+  .inventory-dialog .inventory-search input { min-height: 42px; height: 42px; font-size: 16px; }
+  .inventory-dialog .inventory-search-clear { width: 44px; min-width: 44px; height: 44px; padding: 0; font-size: 25px; }
+  .inventory-dialog .inventory-tools-row { gap: 7px; }
+  .inventory-dialog .inventory-tools > summary { min-height: 44px; height: auto; padding: 8px; gap: 5px; font-size: 12px; }
+  .inventory-dialog .inventory-tools > summary small { font-size: 12px; gap: 3px; }
+  .inventory-dialog .inventory-tools-row > .bulk-review-button { min-height: 44px; padding: 7px 10px; font-size: 13px; white-space: normal; }
+  .inventory-dialog .inventory-active-filters { min-height: 44px; padding: 5px 8px; font-size: 12px; line-height: 1.5; }
+  .inventory-dialog .inventory-active-filters small { display: block; font-size: 12px; }
+  .inventory-dialog .inventory-active-filters button { min-width: 48px; min-height: 44px; padding: 7px; font-size: 13px; }
+  .inventory-dialog .inventory-workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 0; }
+  .inventory-dialog .inventory-roster { min-width: 0; min-height: 0; }
+  .inventory-dialog .inventory-list { gap: 8px; padding: 2px; scroll-padding-block: 6px; }
+  .inventory-dialog .loot-card { flex: 0 0 auto; min-height: 84px; padding: 10px; gap: 9px; }
+  .inventory-dialog .loot-emblem { width: 34px; height: 40px; }
+  .inventory-dialog .loot-emblem svg { width: 26px; height: 26px; }
+  .inventory-dialog .loot-meta { font-size: 12px; gap: 4px 7px; line-height: 1.5; }
+  .inventory-dialog .loot-meta b { font-size: 12px; }
+  .inventory-dialog .loot-meta svg { width: 12px; height: 12px; }
+  .inventory-dialog .loot-copy > strong { margin: 4px 0; font-size: 16px; line-height: 1.45; }
+  .inventory-dialog .loot-bottom { gap: 3px; font-size: 12px; line-height: 1.6; }
+  .inventory-dialog .loot-bottom > span:first-child { display: block; }
+  .inventory-dialog .inventory-pagination { height: 48px; min-height: 48px; gap: 16px; font-size: 13px; }
+  .inventory-dialog .inventory-pagination button { min-width: 44px; width: 44px; min-height: 44px; height: 44px; font-size: 26px; }
+  .inventory-dialog .inventory-summary { font-size: 12px; line-height: 1.5; }
+  .inventory-dialog .inventory-pane-switch { display: none; }
+  .inventory-dialog .inventory-inspect { display: none; min-width: 0; min-height: 0; padding: 10px; overflow: hidden; }
+  .inventory-dialog .inspect-header { align-items: flex-start; gap: 10px; padding-bottom: 12px; margin-bottom: 12px; }
+  .inventory-dialog .inspect-art { display: grid; width: 45px; height: 54px; }
+  .inventory-dialog .inspect-art svg { width: 35px; height: 35px; }
+  .inventory-dialog .inspect-header > div:last-child { display: block; width: auto; min-width: 0; flex: 1; font-size: 14px; }
+  .inventory-dialog .inspect-header .rarity-label { display: flex; font-size: 12px; line-height: 1.5; }
+  .inventory-dialog .inspect-header h3 { margin: 5px 0; font-size: 18px; line-height: 1.45; }
+  .inventory-dialog .inspect-header small { display: block; font-size: 12px; line-height: 1.6; }
+  .inventory-dialog .inspect-upgrade-action { order: 2; margin: 0; min-height: 56px; padding: 8px 0; gap: 8px; border-top: 1px solid var(--inventory-line); border-bottom: 0; }
+  .inventory-dialog .inspect-upgrade-action > span { font-size: 13px; line-height: 1.4; }
+  .inventory-dialog .inspect-upgrade-action > span > small { display: block; margin: 3px 0 0; font-size: 12px; line-height: 1.4; }
+  .inventory-dialog .inspect-upgrade-action .enhance-equipment { display: flex; min-width: 120px; max-width: 55%; min-height: 44px; padding: 7px 9px; gap: 3px; flex-direction: column; align-items: center; justify-content: center; }
+  .inventory-dialog .inspect-upgrade-action .enhance-equipment > span { font-size: 13px; }
+  .inventory-dialog .inspect-upgrade-action .enhance-equipment b { font-size: 15px; }
+  .inventory-dialog .inspect-upgrade-action[data-equipped='false'] { min-height: 44px; padding: 8px 0; }
+  .inventory-dialog .inspect-upgrade-action[data-equipped='false'] > span { white-space: normal; }
+  .inventory-dialog .inspect-upgrade-action[data-equipped='false'] .enhance-equipment { display: none; }
+  .inventory-dialog .inspect-scroll { order: 1; min-width: 0; min-height: 0; flex: 1; padding: 0 4px 12px 0; overflow-x: hidden; overflow-y: auto; }
+  .inventory-dialog .comparison-caption { font-size: 14px; line-height: 1.6; gap: 4px; }
+  .inventory-dialog .comparison-caption > span { font-size: 12px; }
+  .inventory-dialog .weapon-comparison { gap: 5px; padding: 12px 5px; }
+  .inventory-dialog .weapon-comparison span { font-size: 12px; line-height: 1.5; }
+  .inventory-dialog .weapon-comparison strong { font-size: 26px; line-height: 1.25; margin: 7px 0; }
+  .inventory-dialog .weapon-comparison .comparison-baseline { font-size: 12px; line-height: 1.5; }
+  .inventory-dialog .weapon-comparison :is(.comparison-up, .comparison-down, .comparison-new) { font-size: 13px; padding: 3px 4px; }
+  .inventory-dialog .part-comparison { gap: 10px 5px; }
+  .inventory-dialog .part-comparison em { font-size: 12px; }
+  .inventory-dialog .critical-readout { font-size: 13px; line-height: 1.6; }
+  .inventory-dialog :is(.affix-list li, .part-fixed-effect, .weapon-description, .enhancement-note, .loadout-references, .synergy-list span) { font-size: 14px; line-height: 1.75; }
+  .inventory-dialog .equipment-enhancement { padding: 10px; font-size: 14px; }
+  .inventory-dialog .enhancement-heading { font-size: 13px; line-height: 1.6; }
+  .inventory-dialog .enhancement-heading > b { font-size: 14px; }
+  .inventory-dialog .enhancement-heading > span { font-size: 12px; }
+  .inventory-dialog .enhancement-preview { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; line-height: 1.6; }
+  .inventory-dialog .enhancement-preview > span { min-width: 0; flex-wrap: wrap; font-size: 13px; line-height: 1.6; }
+  .inventory-dialog .enhancement-preview b { min-width: 0; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+  .inventory-dialog .enhancement-note { display: block; margin-top: 6px; }
+  .inventory-dialog .affix-heading { flex-wrap: wrap; padding-top: 14px; margin: 15px 0 8px; font-size: 14px; line-height: 1.6; }
+  .inventory-dialog .affix-heading span { font-size: 12px; }
+  .inventory-dialog .affix-list li { padding: 8px 0 8px 13px; }
+  .inventory-dialog .affix-list li::before { top: 13px; }
+  .inventory-dialog .loadout-references small { font-size: 12px; line-height: 1.6; }
+  .inventory-dialog .synergy-list b { font-size: 14px; line-height: 1.6; }
+  .inventory-dialog .synergy-list b > small { font-size: 12px; }
+  .inventory-dialog .synergy-details { min-height: 44px; padding: 9px; font-size: 14px; }
+  .inventory-dialog .inspect-actions { order: 3; flex-shrink: 0; grid-template-columns: minmax(0, .9fr) minmax(0, .9fr) minmax(0, 1.45fr); gap: 6px; padding-top: 8px; }
+  .inventory-dialog .inspect-actions button { min-height: 44px; padding: 7px 5px; font-size: 13px; line-height: 1.5; }
+  .inventory-dialog .inspect-actions .lock-weapon svg { width: 15px; height: 15px; flex-shrink: 0; }
+  .inventory-dialog .inspect-actions .action-full { display: none; }
+  .inventory-dialog .inspect-actions .action-compact { display: inline; }
+  .inventory-dialog .inventory-tools-content { padding: 12px; gap: 14px; }
+  .inventory-dialog .inventory-tools-content h3 { font-size: 15px; line-height: 1.6; }
+  .inventory-dialog .inventory-tools-content :is(.inventory-filters, .inventory-filters.part-filters) { grid-template-columns: minmax(0, 1fr); gap: 9px; }
+  .inventory-dialog .inventory-tools-content :is(.inventory-filters select, .inventory-policy select) { min-height: 44px; height: 44px; font-size: 16px; padding: 6px 9px; }
+  .inventory-dialog .inventory-tools-content :is(p, .inventory-policy small) { font-size: 14px; line-height: 1.75; }
+  .inventory-dialog .inventory-tools-return { min-height: 44px; padding: 10px; font-size: 14px; }
+  .inventory-dialog .inventory-empty { padding: 16px 8px; font-size: 14px; line-height: 1.7; }
+  .inventory-dialog .inventory-empty button { min-height: 44px; font-size: 14px; }
+  .inventory-dialog.bulk-review-active .bulk-review { overflow-y: auto; align-content: start; gap: 12px; padding: 16px 12px; }
+  .inventory-dialog.bulk-review-active .bulk-review b { font-size: 18px; line-height: 1.6; }
+  .inventory-dialog.bulk-review-active .bulk-review span { font-size: 14px; line-height: 1.8; }
+  .inventory-dialog.bulk-review-active .bulk-review button { min-height: 44px; font-size: 14px; }
+  .inventory-dialog .referenced-sale-review { padding: 12px; }
+  .inventory-dialog .referenced-sale-review :is(p, ul) { font-size: 14px; line-height: 1.75; }
+  .inventory-dialog .referenced-sale-review button { min-height: 44px; font-size: 14px; line-height: 1.6; }
+}
+
+@media (max-width: 760px) {
+  .inventory-dialog.inventory-compare-view .inventory-pane-switch { display: flex; flex-shrink: 0; min-height: 44px; height: auto; justify-content: flex-start; padding: 9px 12px; font-size: 14px; line-height: 1.5; }
+  .inventory-dialog.inventory-compare-view :is(.inventory-category-tabs, .inventory-commandbar, .inventory-tools-row, .inventory-active-filters, .inventory-summary) { display: none; }
+  .inventory-dialog.inventory-compare-view .inventory-roster { display: none; }
+  .inventory-dialog.inventory-compare-view .inventory-inspect { display: flex; }
+  .inventory-dialog.inventory-settings-open :is(.inventory-category-tabs, .inventory-commandbar, .inventory-active-filters, .inventory-summary) { display: none; }
+  .inventory-dialog.inventory-settings-open .inventory-tools-row { flex: 1; min-height: 0; }
+  .inventory-dialog.inventory-settings-open .inventory-tools { min-height: 0; }
+  .inventory-dialog.inventory-settings-open .inventory-tools-content { min-height: 0; }
+  .inventory-dialog.bulk-review-active .inventory-pane-switch,
+  .inventory-dialog.referenced-sale-active .inventory-pane-switch,
+  .inventory-dialog.inventory-settings-open .inventory-pane-switch { display: none; }
+}
+
+@media (max-width: 360px) {
+  .inventory-dialog .inventory-category-tabs button { min-height: 44px; font-size: 13px; }
+  .inventory-dialog .inventory-category-tabs button svg { display: none; }
+  .inventory-dialog .inventory-commandbar { grid-template-columns: minmax(0, 1fr) 102px; }
+  .inventory-dialog .inventory-tools > summary { flex-wrap: wrap; }
+  .inventory-dialog .inventory-search > svg { display: none; }
+  .inventory-dialog .inspect-header h3 { font-size: 17px; }
+  .inventory-dialog .weapon-comparison strong { font-size: 23px; }
+}
+
+/* Landscape uses the full width for the active decision, with navigation in the title rail. */
+@media (max-height: 500px) and (min-width: 500px) and (max-width: 1000px) {
+  .inventory-dialog { padding-block: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-bottom)); }
+  .inventory-dialog h2 { min-height: 44px; margin-bottom: 6px; font-size: 18px; line-height: 44px; }
+  .inventory-dialog .dialog-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); gap: 7px; }
+  .inventory-dialog .inventory-category-tabs { grid-column: 1; grid-row: 1; }
+  .inventory-dialog .inventory-category-tabs button { flex-direction: row; min-height: 44px; gap: 4px; }
+  .inventory-dialog .inventory-category-tabs button svg { display: none; }
+  .inventory-dialog .inventory-commandbar { grid-column: 2; grid-row: 1; grid-template-columns: minmax(0, 1fr) 108px; }
+  .inventory-dialog .inventory-tools-row { grid-column: 1 / -1; grid-row: 2; }
+  .inventory-dialog .inventory-workspace { grid-column: 1 / -1; grid-row: 3; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); gap: 0; }
+  .inventory-dialog .inventory-roster { display: flex; }
+  .inventory-dialog .inventory-inspect { display: none; padding: 8px; }
+  .inventory-dialog .inventory-summary { display: none; }
+  .inventory-dialog .inventory-pagination { height: 44px; min-height: 44px; }
+  .inventory-dialog .inventory-active-filters { grid-column: 1 / -1; grid-row: 3; }
+  .inventory-dialog:has(.inventory-active-filters:not([hidden])) .dialog-body { grid-template-rows: auto auto auto minmax(0, 1fr); }
+  .inventory-dialog:has(.inventory-active-filters:not([hidden])) .inventory-workspace { grid-row: 4; }
+  .inventory-dialog .inspect-upgrade-action { min-height: 48px; padding-block: 2px; }
+  .inventory-dialog .inspect-upgrade-action > span > small { margin-top: 1px; }
+  .inventory-dialog .inspect-upgrade-action .enhance-equipment { min-height: 44px; min-width: 200px; padding: 6px 9px; flex-direction: row; gap: 10px; }
+  .inventory-dialog .inspect-actions { padding-top: 5px; }
+  .inventory-dialog .dialog-actions { margin-top: 6px; padding-top: 5px; }
+  .inventory-dialog.inventory-compare-view h2 { padding-left: 222px; }
+  .inventory-dialog.inventory-compare-view .dialog-body { display: flex; gap: 0; }
+  .inventory-dialog.inventory-compare-view .inventory-pane-switch { display: flex; position: absolute; top: max(6px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); width: 208px; height: 44px; min-height: 44px; padding: 8px 10px; justify-content: flex-start; font-size: 14px; line-height: 1.5; }
+  .inventory-dialog.inventory-compare-view :is(.inventory-category-tabs, .inventory-commandbar, .inventory-tools-row, .inventory-active-filters, .inventory-summary) { display: none; }
+  .inventory-dialog.inventory-compare-view .inventory-workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  .inventory-dialog.inventory-compare-view .inventory-roster { display: none; }
+  .inventory-dialog.inventory-compare-view .inventory-inspect { display: flex; }
+  .inventory-dialog.inventory-settings-open .dialog-body { display: flex; }
+  .inventory-dialog.inventory-settings-open :is(.inventory-category-tabs, .inventory-commandbar, .inventory-active-filters) { display: none; }
+  .inventory-dialog.inventory-settings-open .inventory-tools-content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-content: start; gap: 10px 14px; }
+  .inventory-dialog.inventory-settings-open .inventory-tools-content h3 { grid-column: 1 / -1; }
+  .inventory-dialog.inventory-settings-open .inventory-tools-content :is(p, .inventory-tools-return) { grid-column: 1 / -1; }
+  .inventory-dialog.bulk-review-active .dialog-body,
+  .inventory-dialog.referenced-sale-active .dialog-body { display: flex; }
+  .inventory-dialog:is(.bulk-review-active, .referenced-sale-active, .inventory-settings-open) h2 { padding-left: 0; }
+  .inventory-dialog:is(.bulk-review-active, .referenced-sale-active, .inventory-settings-open) .inventory-pane-switch { display: none; }
+}

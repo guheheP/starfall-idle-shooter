@@ -12,6 +12,7 @@ import { renderMissionBoard } from './ui/mission-board';
 import { getMissionRewardLevel, type MissionId, type MissionSummary } from './game/missions';
 import { OPERATION_NODES, type OperationId } from './game/operations';
 import { getRequisitionProfile, isRequisitionModel, type RequisitionModel } from './game/requisition';
+import { getPwaState, subscribePwaState, installPwa } from './pwa';
 
 type LootItem = WeaponItem | PartItem;
 type InventoryCategory = 'weapon' | PartSlot;
@@ -80,6 +81,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     <div class="app-shell">
       <main class="game-layout">
         <section class="flight-section" aria-label="シューティングプレイ画面">
+          <div class="mobile-flight-summary"><span class="mobile-credit">${icon('coin')}<b data-value="mobile-credits">90</b><small>CR</small></span><span class="mobile-power"><small>DPS</small><b data-value="mobile-dps">65</b></span><button data-action="help" aria-label="遊び方を開く">${icon('help')}</button><button data-action="settings" aria-label="設定を開く">${icon('settings')}</button></div>
           <div class="cockpit" id="cockpit">
             <div id="game-canvas" aria-label="シューティング画面。WASD・矢印キーまたはドラッグで移動、Spaceで必殺技" tabindex="0"></div>
             <div class="cockpit-vignette" aria-hidden="true"></div>
@@ -108,10 +110,12 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
           <div class="hangar-panel" id="panel-research" role="tabpanel" aria-labelledby="tab-research" hidden><section class="research-summary"><div class="research-summary-heading"><span>永続スキル</span><b data-value="skill-total">0 / 27</b></div><div class="research-branches">${SKILL_BRANCHES.map(branch => `<button class="research-branch-summary" data-action="open-research-branch" data-id="${branch.id}" style="--branch-color:${branch.color}"><span>${icon(branch.id === 'offense' ? 'crosshair' : branch.id === 'defense' ? 'shield' : 'salvager')}<b>${branch.name}</b><small data-value="branch-${branch.id}-ranks">0 / 9</small></span><span class="branch-summary-track"><span data-value="branch-${branch.id}-bar"></span></span></button>`).join('')}</div><button class="research-tree-trigger" data-action="skill-tree"><span>${icon('core')}<b>CR スキルツリー</b></span>${icon('arrow')}</button><p data-value="research-intro">WAVE 15 から研究可能</p></section><button class="prestige-button" data-action="prestige"><span><b>再出撃する</b><small data-value="prestige-reward">WAVE 15 で解放</small></span>${icon('arrow')}</button></div>
           <div class="hangar-footer"><span>累計撃破 <b data-value="total-kills">0</b></span><span>出撃 <b data-value="runs">01</b></span></div>
         </aside>
+        <nav class="mobile-navigation" aria-label="ゲームメニュー"><button data-action="inventory" aria-label="装備倉庫を開く">${icon('inventory')}<span>倉庫</span><i data-value="mobile-loot-count">1</i></button><button data-action="mobile-hangar" aria-label="機体整備を開く" aria-haspopup="dialog">${icon('module')}<span>整備</span></button><button data-action="skill-tree" aria-label="永続研究を開く">${icon('core')}<span>研究</span></button><button data-action="records" aria-label="航行情報・収集記録・任務を開く">${icon('records')}<span>記録</span></button></nav>
       </main>
     </div>
     <div class="toast-region" role="status" aria-live="polite" aria-atomic="true"><div class="toast" hidden><span class="toast-indicator"></span><span data-value="toast"></span></div></div>
-    <dialog class="game-dialog" aria-labelledby="dialog-title"><div class="dialog-eyebrow microtype" data-value="dialog-eyebrow"></div><h2 id="dialog-title"></h2><div class="dialog-body"></div><div class="dialog-actions"></div><button class="dialog-close icon-button" data-action="close-dialog" aria-label="ダイアログを閉じる">×</button></dialog>`;
+    <dialog class="mobile-hangar-dialog" aria-label="機体整備"><div class="mobile-hangar-bar"><span>整備中 · 戦闘は一時停止</span><button data-action="close-mobile-hangar">飛行に戻る <span aria-hidden="true">×</span></button></div></dialog>
+    <dialog class="game-dialog" aria-labelledby="dialog-title"><div class="dialog-eyebrow microtype" data-value="dialog-eyebrow"></div><h2 id="dialog-title" tabindex="-1"></h2><div class="dialog-body"></div><div class="dialog-actions"></div><button class="dialog-close icon-button" data-action="close-dialog" aria-label="ダイアログを閉じる">×</button></dialog>`;
 
   const query = <T extends Element = HTMLElement>(selector: string): T => app.querySelector<T>(selector)!;
   const canFocusButton = (button: HTMLButtonElement | null | undefined): button is HTMLButtonElement => !!button && !button.disabled && button.getClientRects().length > 0;
@@ -120,6 +124,12 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
   const set = (name: string, value: string) => { const element = values.get(name); if (element && element.textContent !== value) element.textContent = value; };
   const bar = (name: string, ratio: number) => { const element = values.get(name); if (element) element.style.width = `${Math.max(0, Math.min(1, ratio)) * 100}%`; };
   const dialog = query<HTMLDialogElement>('.game-dialog');
+  const mobileDock = query<HTMLDialogElement>('.mobile-hangar-dialog');
+  const hangar = query<HTMLElement>('.hangar');
+  const layout = query<HTMLElement>('.game-layout');
+  const mobileLayout = matchMedia('(max-width: 760px), (max-width: 1000px) and (max-height: 500px)');
+  let pausedBeforeDock = false;
+  let focusBeforeDock: HTMLElement | null = null;
   const toastElement = query<HTMLElement>('.toast');
   let toastTimer: ReturnType<typeof setTimeout> | undefined;
   let pausedBeforeDialog = false;
@@ -150,6 +160,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
   let missionDetailScroll = 0;
   let renderedRecordsTab: RecordsTab | null = null;
   let selectedMissionId: MissionId = 'kills';
+  let missionExpanded = false;
   let requisitionModel: RequisitionModel = 'pulse';
   let missionReceipt: { missionId: MissionId; item: LootItem } | null = null;
   let loadoutTab: 'presets' | 'synergies' = 'presets';
@@ -341,7 +352,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     const summary = sim.getCollectionSummary();
     const milestones = sim.getCollectionMilestones();
     const missions = sim.getMissions();
-    const signature = JSON.stringify([recordsTab, sim.state.wave, sim.state.bestWave, sim.state.collection, milestones, missions, sim.getOperation().id, sim.getActiveOperation().id, selectedMissionId, requisitionModel, sim.state.inventory.length, sim.state.parts.length, missionReceipt]);
+    const signature = JSON.stringify([recordsTab, sim.state.wave, sim.state.bestWave, sim.state.collection, milestones, missions, sim.getOperation().id, sim.getActiveOperation().id, selectedMissionId, requisitionModel, sim.state.inventory.length, sim.state.parts.length, missionReceipt, missionExpanded]);
     if (recordsSignature === signature) return;
     recordsSignature = signature;
     const content = query('[data-records="content"]');
@@ -353,6 +364,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
       missionDetailScroll = content.querySelector<HTMLElement>('.mission-detail')?.scrollTop ?? missionDetailScroll;
     }
     content.classList.toggle('missions-content', recordsTab === 'missions');
+    dialog.classList.toggle('mission-detail-open', recordsTab === 'missions' && missionExpanded);
     content.setAttribute('aria-labelledby', `records-tab-${recordsTab}`);
     app!.querySelectorAll<HTMLButtonElement>('[data-action="records-tab"]').forEach(button => { const active = button.dataset.id === recordsTab; button.setAttribute('aria-selected', String(active)); button.tabIndex = active ? 0 : -1; });
     if (recordsTab === 'navigation') {
@@ -364,7 +376,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
       query('[data-records="content"]').innerHTML = `<section class="sector-current" style="--sector-color:${cssColor(sector.color)}"><div><span class="microtype">CURRENT SECTOR / WAVE ${sim.state.wave}</span><h3>${sector.name}</h3><p>${sector.description}</p></div><span class="sector-symbol">${icon('records')}</span></section><div class="sector-modifiers"><div><span>宙域の戦闘CR</span><b>×${sector.creditMultiplier.toFixed(2)}</b></div><div><span>宙域の敵弾速度</span><b>×${sector.enemySpeed.toFixed(2)}</b></div><div><span>宙域の敵射撃間隔</span><b>×${sector.shotInterval.toFixed(2)}</b></div><div><span>通常の装備回収率</span><b>武器 ${dropPercent(sector.weaponDropChance)}% / パーツ ${dropPercent(sector.partDropChance)}%</b></div></div><p class="records-note">${next ? `次の宙域は WAVE ${next.unlockWave}「${next.name}」。` : '最深部の宙域を航行中。'}離席の回収率は最高クリアWAVEの宙域を反映します。</p><h3 class="records-section-heading">航路</h3><div class="sector-route">${SECTORS.map((item, position) => { const reached = sim.state.bestWave >= item.unlockWave; return `<article class="sector-route-stop ${position === index ? 'current' : reached ? 'reached' : ''}" style="--sector-color:${cssColor(item.color)}"><span class="route-number">0${position + 1}</span><div><h4>${item.name}<small>W${item.unlockWave}${SECTORS[position + 1] ? `–${SECTORS[position + 1].unlockWave - 1}` : '＋'}</small></h4><p>${item.description}</p></div><b>${position === index ? '航行中' : reached ? '記録あり' : '未記録'}</b></article>`; }).join('')}</div>`;
       content.insertAdjacentHTML('beforeend', operationsMarkup());
     } else if (recordsTab === 'missions') {
-      content.innerHTML = missionsMarkup(missions);
+      content.innerHTML = '<button class="mission-pane-switch" data-action="mission-list">← 任務一覧に戻る</button>' + missionsMarkup(missions);
     } else {
       const collection = sim.state.collection;
       const discovered = (count: number | undefined) => (count ?? 0) > 0;
@@ -372,6 +384,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     }
     content.scrollTop = recordsScroll[recordsTab];
     if (recordsTab === 'missions') {
+      if (mobileLayout.matches) query('.mission-detail').prepend(query('.mission-detail-header'));
       query('.mission-roster').scrollTop = missionRosterScroll;
       query('.mission-detail').scrollTop = missionDetailScroll;
     }
@@ -481,7 +494,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     const compactSell = equipped ? '装備中' : item.starter ? '初期装備' : item.locked ? '保護中' : `売却 ${format(sellValue(item))} CR`;
     const description = isWeapon(item) ? `<p class="weapon-description">${itemBase(item).description}</p>` : '';
     const refundMarkup = enhancementLevel(item) > 0 && !item.starter ? `<p class="part-fixed-effect">売却額には強化費の50%（${fee(getEnhancementRefund(item))} CR）を含みます。</p>` : '';
-    query('[data-inventory="detail"]').innerHTML = `<div class="inspect-header" style="--rarity-color:${cssColor(rarity.color)}"><div class="inspect-art">${gearArt(item)}<span></span></div><div><span class="rarity-label"><span class="rarity-mark" title="${rarity.label}" role="img" aria-label="${rarity.label}"></span>拾得Lv.${item.level} · 強化+${enhancementLevel(item)}</span><h3 title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</h3><small>${itemBase(item).name}${item.starter ? ' · 初期装備' : ''}</small></div></div>${enhancementActionMarkup(item)}<div class="inspect-scroll">${performance}${referenceMarkup}${matchedEnhancementMarkup(item)}${enhancementMarkup(item)}${refundMarkup}${description}${fixedEffects}<h4 class="affix-heading">ランダム副次効果 <span>${affixes.length} AFFIXES</span></h4><ul class="affix-list">${affixes.length ? affixes.map(affix => `<li>${escapeHTML(affix)}</li>`).join('') : '<li class="affix-none">副次効果なし。敵から装備を回収して更新しよう。</li>'}</ul><h4 class="affix-heading">現在の組み合わせ</h4><ul class="synergy-list">${synergyText}</ul><button class="synergy-details" data-action="synergy-details">相性のヒントを見る</button></div><div class="inspect-actions"><button class="equip-weapon" data-action="equip-weapon" data-id="${escapeHTML(item.id)}" ${equipped ? 'disabled' : ''}><span class="action-full">${equipped ? '装備中' : 'この装備を使う'}</span><span class="action-compact">${equipped ? '装備中' : '装備'}</span></button><button class="lock-weapon ${item.locked ? 'locked' : ''}" data-action="lock-weapon" data-id="${escapeHTML(item.id)}" aria-pressed="${item.locked}" ${item.starter ? 'disabled' : ''}>${icon('lock')}<span class="action-full">${item.locked ? '保護中' : '保護する'}</span><span class="action-compact">${item.locked ? '保護中' : '保護'}</span></button><button class="sell-weapon" data-action="sell-weapon" data-id="${escapeHTML(item.id)}" title="${sellProtection}" aria-label="${sellProtection}" ${protectedItem(item) ? 'disabled' : ''}><span class="action-full">${sellProtection}</span><span class="action-compact">${compactSell}</span></button></div>`;
+    query('[data-inventory="detail"]').innerHTML = `${enhancementActionMarkup(item)}<div class="inspect-scroll"><div class="inspect-header" style="--rarity-color:${cssColor(rarity.color)}"><div class="inspect-art">${gearArt(item)}<span></span></div><div><span class="rarity-label"><span class="rarity-mark" title="${rarity.label}" role="img" aria-label="${rarity.label}"></span>拾得Lv.${item.level} · 強化+${enhancementLevel(item)}</span><h3 title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</h3><small>${itemBase(item).name}${item.starter ? ' · 初期装備' : ''}</small></div></div>${performance}${referenceMarkup}${matchedEnhancementMarkup(item)}${enhancementMarkup(item)}${refundMarkup}${description}${fixedEffects}<h4 class="affix-heading">ランダム副次効果 <span>${affixes.length} AFFIXES</span></h4><ul class="affix-list">${affixes.length ? affixes.map(affix => `<li>${escapeHTML(affix)}</li>`).join('') : '<li class="affix-none">副次効果なし。敵から装備を回収して更新しよう。</li>'}</ul><h4 class="affix-heading">現在の組み合わせ</h4><ul class="synergy-list">${synergyText}</ul><button class="synergy-details" data-action="synergy-details">相性のヒントを見る</button></div><div class="inspect-actions"><button class="equip-weapon" data-action="equip-weapon" data-id="${escapeHTML(item.id)}" ${equipped ? 'disabled' : ''}><span class="action-full">${equipped ? '装備中' : 'この装備を使う'}</span><span class="action-compact">${equipped ? '装備中' : '装備'}</span></button><button class="lock-weapon ${item.locked ? 'locked' : ''}" data-action="lock-weapon" data-id="${escapeHTML(item.id)}" aria-pressed="${item.locked}" ${item.starter ? 'disabled' : ''}>${icon('lock')}<span class="action-full">${item.locked ? '保護中' : '保護する'}</span><span class="action-compact">${item.locked ? '保護中' : '保護'}</span></button><button class="sell-weapon" data-action="sell-weapon" data-id="${escapeHTML(item.id)}" title="${sellProtection}" aria-label="${sellProtection}" ${protectedItem(item) ? 'disabled' : ''}><span class="action-full">${sellProtection}</span><span class="action-compact">${compactSell}</span></button></div>`;
     query<HTMLButtonElement>('.synergy-details').textContent = showAllSynergies ? '現在の組み合わせに戻る' : '相性のヒントを見る';
     const eligible = eligibleItems();
     const bulkButton = query<HTMLButtonElement>('[data-action="review-bulk"]');
@@ -538,8 +551,64 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     render();
   }
 
+  function closeMobileDock(): void {
+    if (!mobileDock.open) return;
+    mobileDock.close();
+    sim.paused = pausedBeforeDock;
+    const returnTarget = focusBeforeDock?.getClientRects().length ? focusBeforeDock : query<HTMLElement>('[data-action="mobile-hangar"]');
+    returnTarget.focus({ preventScroll: true });
+    render();
+  }
+
+  function openMobileDock(): void {
+    if (!mobileLayout.matches || dialog.open || mobileDock.open) return;
+    pausedBeforeDock = sim.paused;
+    focusBeforeDock = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    sim.paused = true;
+    mobileDock.showModal();
+    query<HTMLButtonElement>('[data-action="close-mobile-hangar"]').focus({ preventScroll: true });
+    render();
+  }
+
+  const adaptMobileLayout = (): void => {
+    if (mobileLayout.matches) mobileDock.append(hangar);
+    else {
+      closeMobileDock();
+      layout.insertBefore(hangar, query('.mobile-navigation'));
+    }
+    if (dialogType === 'records') { recordsSignature = ''; render(); }
+  };
+  const cancelMobileDock = (event: Event): void => { event.preventDefault(); closeMobileDock(); };
+  const mobileDockBackdrop = (event: MouseEvent): void => {
+    if (event.target !== mobileDock) return;
+    const bounds = mobileDock.getBoundingClientRect();
+    if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) closeMobileDock();
+  };
+
+  function pwaSettingsMarkup(): string {
+    return '<section class="pwa-settings"><h3>ホーム画面で遊ぶ</h3><p>アプリとして追加すると、ブラウザの枠を外して起動できます。</p><button class="pwa-install-button" data-action="install-pwa">追加方法を見る</button><p class="pwa-install-guide" data-pwa="guide" hidden></p><p class="pwa-offline-status" data-pwa="offline" role="status"></p><p class="pwa-update-status" data-pwa="update" hidden>更新を準備しました。ゲームをすべて閉じ、次に開いたときに反映します。</p></section>';
+  }
+
+  function renderPwaSettings(): void {
+    if (dialogType !== 'settings') return;
+    const state = getPwaState();
+    const button = query<HTMLButtonElement>('[data-action="install-pwa"]');
+    button.hidden = state.installed;
+    button.textContent = state.canInstall ? 'ホーム画面にインストール' : 'ホーム画面への追加方法';
+    query('[data-pwa="guide"]').textContent = state.installMethod === 'ios'
+      ? '共有メニューから「ホーム画面に追加」を選び、「追加」を押してください。見つからない場合はSafariで開いてください。'
+      : 'Chrome・Edgeなどのブラウザで開き、メニューから「アプリをインストール」または「ホーム画面に追加」を選んでください。';
+    query('[data-pwa="offline"]').textContent = state.offlineStatus === 'ready'
+      ? `${state.installed ? 'インストール済み · ' : ''}オフラインで起動できます。進捗はこの端末に保存します。`
+      : state.offlineStatus === 'preparing'
+        ? 'オフライン起動の準備中です。初回は通信したままお待ちください。'
+        : 'オフライン起動の準備は未完了です。通信がある状態で再度開いてください。';
+    query<HTMLElement>('[data-pwa="update"]').hidden = !state.updateReady;
+  }
+
   function openDialog(kind: string): void {
     if (dialog.open) return;
+    if (mobileDock.open) closeMobileDock();
     pausedBeforeDialog = sim.paused;
     focusBeforeDialog = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     sim.paused = true;
@@ -583,7 +652,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
       content = '<p>機体は自動で射撃。敵を倒して集めた装備を回収・交換し、さらに奥の WAVE を目指しましょう。</p><div class="manual-row"><span>自動操縦</span><p>ON なら移動も自動。眺めながら強化を選ぶだけでも遊べます。</p></div><div class="manual-row"><span>移動</span><p><kbd>W A S D</kbd> / 矢印キー<br>画面のドラッグでも操縦できます。自動操縦中も、操作している間は手動移動を優先します。</p></div><div class="manual-row"><span>必殺技</span><p><kbd>SPACE</kbd> / オーバードライブボタン<br>短時間の火力アップで一気に突破。</p></div><div class="manual-row"><span>メニュー</span><p><kbd>I</kbd> 装備倉庫 / <kbd>M</kbd> 任務 / <kbd>P</kbd> 一時停止<br><kbd>ESC</kbd> で閉じて飛行に戻ります。</p></div><div class="manual-row"><span>装備回収</span><p>敵から武器・ウイング・ボディ・ドローンと副次効果を回収。「装備倉庫」で性能を比べ、好きな装備で機体と戦い方を組み立てられます。保護した装備は売却対象から外れます。取得時の自動売却は最初から設定可能です。</p></div><div class="manual-row"><span>レア度の色</span><p>灰：コモン / 緑：アンコモン / 青：レア / 紫：エピック / 金：レジェンダリー。装備の枠と光の色で見分けられます。</p></div><div class="manual-row"><span>長く楽しむ</span><p>5 WAVE ごとにボス。先の宙域ほど多彩な武器が出現し、WAVE 15 からCRで永続スキルを研究できます。装備中の4部位は倉庫で+10まで強化できます。手持ちCR・装備強化・永続スキル・熟練度は再出撃後も保管されます。</p></div><p class="dialog-detail">離席中も資源を回収します（上限8時間）。保存はこのブラウザ内です。</p>';
     } else if (kind === 'settings') {
       eyebrow = 'SYSTEM PREFERENCES'; heading = '自分のペースで。';
-      content = `<label class="setting-row"><span><b>サウンド</b><small>射撃・撃破・報酬の効果音</small></span><input type="checkbox" data-setting="sound" ${sim.state.sound ? 'checked' : ''}><span class="setting-switch" aria-hidden="true"></span></label><label class="setting-row"><span><b>エフェクト</b><small>画面の揺れ・発光・パーティクル</small></span><input type="checkbox" data-setting="effects" ${sim.state.effects ? 'checked' : ''}><span class="setting-switch" aria-hidden="true"></span></label><p class="dialog-detail">設定は次回の出撃にも引き継がれます。</p>${options.onResetProgress ? '<section class="progress-reset-setting"><h3>進捗のリセット</h3><p>装備・育成・記録を初期化し、最初から遊び直します。</p><button class="progress-reset-trigger" data-action="request-reset-progress">リセット内容を確認</button></section>' : ''}`;
+      content = `<label class="setting-row"><span><b>サウンド</b><small>射撃・撃破・報酬の効果音</small></span><input type="checkbox" data-setting="sound" ${sim.state.sound ? 'checked' : ''}><span class="setting-switch" aria-hidden="true"></span></label><label class="setting-row"><span><b>エフェクト</b><small>画面の揺れ・発光・パーティクル</small></span><input type="checkbox" data-setting="effects" ${sim.state.effects ? 'checked' : ''}><span class="setting-switch" aria-hidden="true"></span></label><p class="dialog-detail">設定は次回の出撃にも引き継がれます。</p>${pwaSettingsMarkup()}${options.onResetProgress ? '<section class="progress-reset-setting"><h3>進捗のリセット</h3><p>装備・育成・記録を初期化し、最初から遊び直します。</p><button class="progress-reset-trigger" data-action="request-reset-progress">リセット内容を確認</button></section>' : ''}`;
     } else if (kind === 'reset-progress') {
       resetPending = false;
       eyebrow = 'START A NEW FLIGHT'; heading = '進捗をリセット';
@@ -604,7 +673,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     body.innerHTML = content;
     actions.innerHTML = buttons;
     dialog.showModal();
-    if (kind === 'reset-progress') query<HTMLInputElement>('[data-reset-confirm]').focus(); else query<HTMLButtonElement>('.dialog-primary').focus();
+    if (kind === 'reset-progress') query<HTMLInputElement>('[data-reset-confirm]').focus({ preventScroll: true }); else query<HTMLElement>('#dialog-title').focus({ preventScroll: true });
     render();
   }
 
@@ -633,6 +702,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     const missions = sim.getMissions();
     selectedMissionId = (missions.find(mission => mission.ready) ?? missions.find(mission => mission.active))?.id ?? selectedMissionId;
     recordsTab = 'missions';
+    missionExpanded = true;
     openDialog('records');
   }
 
@@ -652,6 +722,14 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     const button = (event.target as Element).closest<HTMLButtonElement>('[data-action]');
     if (!button || button.disabled) return;
     const { action, id } = button.dataset;
+    if (action === 'mobile-hangar') { openMobileDock(); return; }
+    if (action === 'close-mobile-hangar') { closeMobileDock(); return; }
+    if (action === 'install-pwa') {
+      query<HTMLElement>('[data-pwa="guide"]').hidden = false;
+      button.disabled = true;
+      void installPwa().finally(() => { if (!destroyed && dialogType === 'settings') { button.disabled = false; renderPwaSettings(); } });
+      return;
+    }
     if (action === 'request-reset-progress') { closeDialog(); openDialog('reset-progress'); return; }
     if (action === 'cancel-reset-progress' && !resetPending) { closeDialog(); openDialog('settings'); return; }
     if (action === 'confirm-reset-progress') {
@@ -672,9 +750,11 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     if (action === 'tab') selectTab(id!);
     if (action === 'help' || action === 'settings' || action === 'pause' || action === 'inventory' || action === 'synergies' || action === 'skill-tree' || action === 'records') openDialog(action);
     if (action === 'missions') openMissions();
-    if (action === 'records-tab') selectRecordsTab(id as RecordsTab);
+    if (action === 'records-tab') { missionExpanded = false; selectRecordsTab(id as RecordsTab); }
+    if (action === 'mission-list') { missionExpanded = false; render(); query<HTMLButtonElement>(`[data-action="inspect-mission"][data-id="${selectedMissionId}"]`).focus({ preventScroll: true }); return; }
     if (action === 'inspect-mission') {
       selectedMissionId = id as MissionId;
+      missionExpanded = true;
       missionDetailScroll = 0;
       query('.mission-detail').scrollTop = 0;
     }
@@ -773,6 +853,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     render();
     if (action === 'clear-inventory-search' || action === 'reset-inventory-filters') query<HTMLInputElement>('[data-inventory-control="search"]').focus({ preventScroll: true });
     if (action === 'inspect-weapon' && canFocusButton(query<HTMLButtonElement>('.inventory-pane-switch'))) query<HTMLButtonElement>('.inventory-pane-switch').focus({ preventScroll: true });
+    if (action === 'inspect-mission' && canFocusButton(query<HTMLButtonElement>('.mission-pane-switch'))) query<HTMLButtonElement>('.mission-pane-switch').focus({ preventScroll: true });
     if ((action === 'save-loadout' || action === 'delete-loadout') && pendingLoadout) query<HTMLButtonElement>('[data-action="confirm-loadout-review"]').focus({ preventScroll: true });
     if (action === 'sell-weapon' && pendingReferencedSale) query<HTMLButtonElement>('[data-action="confirm-referenced-sale"]').focus({ preventScroll: true });
     if (action === 'cancel-referenced-sale' || action === 'confirm-referenced-sale') {
@@ -851,6 +932,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
   const keyboard = (event: KeyboardEvent): void => {
     if (event.repeat) return;
     if (event.key === 'Escape' && dialog.open) { event.preventDefault(); closeDialog(); return; }
+    if (event.key === 'Escape' && mobileDock.open) { event.preventDefault(); closeMobileDock(); return; }
     if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement || event.target instanceof HTMLTextAreaElement) return;
     if (!dialog.open && !event.ctrlKey && !event.metaKey && !event.altKey && ['i', 'm'].includes(event.key.toLowerCase())) {
       event.preventDefault();
@@ -924,6 +1006,10 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     const state = sim.state;
     const stats = sim.getStats();
     set('credits', format(state.credits));
+    set('mobile-credits', format(state.credits));
+    set('mobile-dps', format(stats.dps));
+    set('mobile-loot-count', `${state.inventory.length + state.parts.length}`);
+    renderPwaSettings();
     set('wave', state.wave.toString().padStart(2, '0'));
     set('best-wave', state.bestWave.toString().padStart(2, '0'));
     const currentSector = getSector(state.wave);
@@ -961,7 +1047,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     set('overdrive-status', sim.overdriveLeft > 0 ? `発動中 · ${Math.ceil(sim.overdriveLeft)}秒` : ready ? '必殺技、準備完了' : `充填中 · あと ${Math.ceil(sim.overdriveCooldown)}秒`);
     bar('overdrive-bar', ready ? 1 : sim.overdriveLeft > 0 ? sim.overdriveLeft / sim.getOverdriveDuration() : 1 - sim.overdriveCooldown / stats.cooldownSeconds);
     const notice = query<HTMLElement>('.field-notice');
-    notice.hidden = !(sim.status === 'recovering' || (sim.paused && !dialog.open));
+    notice.hidden = !(sim.status === 'recovering' || (sim.paused && !dialog.open && !mobileDock.open));
     if (sim.status === 'recovering') { set('notice-label', 'REPAIRING SHIP'); set('notice-text', `修復中 · あと ${Math.ceil(sim.recoveryLeft)}秒`); }
     else if (sim.paused) { set('notice-label', 'FLIGHT PAUSED'); set('notice-text', '一時停止中'); }
     set('flight-state', sim.paused ? 'FLIGHT PAUSED' : sim.status === 'recovering' ? 'REPAIRING SYSTEM' : sim.overdriveLeft > 0 ? 'OVERDRIVE ACTIVE' : 'SYSTEM ONLINE');
@@ -1070,9 +1156,14 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
       if (state.bestWave === 15) toast('WAVE 15 到達！研究と再出撃を解放しました', 'power');
       lastBestWave = state.bestWave;
     }
-    if (!dialog.open && sim.offlineReward && sim.offlineReward.credits > 0) openDialog('offline');
+    if (!dialog.open && !mobileDock.open && sim.offlineReward && sim.offlineReward.credits > 0) openDialog('offline');
   }
 
+  adaptMobileLayout();
+  mobileLayout.addEventListener('change', adaptMobileLayout);
+  mobileDock.addEventListener('cancel', cancelMobileDock);
+  mobileDock.addEventListener('click', mobileDockBackdrop);
+  const unsubscribePwa = subscribePwaState(() => { if (!destroyed) renderPwaSettings(); });
   render();
   return {
     render,
@@ -1081,6 +1172,11 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
       resetPending = false;
       destroyed = true;
       if (dialog.open) closeDialog();
+      if (mobileDock.open) closeMobileDock();
+      mobileLayout.removeEventListener('change', adaptMobileLayout);
+      mobileDock.removeEventListener('cancel', cancelMobileDock);
+      mobileDock.removeEventListener('click', mobileDockBackdrop);
+      unsubscribePwa();
       if (toastTimer) clearTimeout(toastTimer);
       if (inventorySearchTimer) clearTimeout(inventorySearchTimer);
       app.removeEventListener('click', click);

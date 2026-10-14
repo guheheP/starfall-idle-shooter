@@ -1,0 +1,189 @@
+/* Phone combat stays visible. Menus use the native dialog focus/input boundary. */
+.mobile-flight-summary, .mobile-navigation, .mobile-hangar-dialog { display: none; }
+.mission-pane-switch { display: none; }
+.pwa-settings { margin-top: 24px; padding-top: 18px; border-top: 1px solid #44647b; }
+.pwa-settings h3 { margin: 0 0 8px; font-size: 14px; color: #c7e9f0; }
+.pwa-settings p { font-size: 13px; line-height: 1.75; color: #b8cfdd; }
+.pwa-install-button { min-height: 44px; width: 100%; padding: 10px 14px; color: #daf4f7; background: #224959; border: 1px solid #77b6c4; font-size: 14px; }
+.pwa-install-guide { padding: 12px; border-left: 3px solid #86e4ee; background: #122d3c; }
+.pwa-settings .pwa-offline-status { color: #b6d9d5; }
+.pwa-settings .pwa-update-status { color: #edce9f; }
+
+@media (max-width: 760px), (max-width: 1000px) and (max-height: 500px) {
+  html { overscroll-behavior: none; }
+  .app-shell { width: 100%; height: 100dvh; padding: max(4px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(4px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left)); }
+  .game-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 58px; gap: 5px; }
+  .game-layout > .hangar { display: none; }
+  .flight-section { grid-template-columns: minmax(0, 1fr); grid-template-rows: 44px minmax(0, 1fr) 52px; gap: 5px; }
+  .mobile-flight-summary { display: flex; gap: 8px; align-items: center; min-width: 0; }
+  .mobile-credit { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 5px; color: #ffd099; }
+  .mobile-credit svg { width: 18px; height: 18px; align-self: center; }
+  .mobile-credit b { font: 700 26px var(--type); letter-spacing: .2px; }
+  .mobile-credit small, .mobile-power small { font-size: 11px; }
+  .mobile-power { display: flex; gap: 5px; align-items: baseline; margin-right: 4px; color: #a9cadc; }
+  .mobile-power b { font: 600 18px var(--type); color: #deeff7; }
+  .mobile-flight-summary > button { width: 44px; height: 44px; display: grid; place-items: center; flex: 0 0 44px; background: #142b3b; border: 1px solid #385b72; border-radius: 8px; }
+  .mobile-flight-summary > button svg { width: 21px; height: 21px; }
+  .cockpit { border-color: #3e637a; border-radius: 7px; }
+  .flight-topline { display: none; }
+  .field-hud { top: 10px; left: 12px; right: 12px; align-items: flex-start; }
+  .field-hud .microtype { font-size: 10px; }
+  .wave-display > div { margin-top: 1px; gap: 8px; align-items: baseline; }
+  .wave-display > div > span:first-child { font-size: 36px; }
+  .wave-suffix { font-size: 11px; line-height: 1.45; letter-spacing: 0; white-space: normal; }
+  .best-display strong { font-size: 23px; margin-top: 4px; }
+  .wave-progress { top: 74px; left: 12px; right: 12px; }
+  .boss-hud { top: 84px; left: 12px; right: 12px; }
+  .boss-hud .microtype { font-size: 10px; }
+  .boss-hud [data-value='boss-hp'] { font-size: 12px; }
+  .shield-hud { left: 12px; bottom: 15px; width: 145px; }
+  .shield-hud .microtype { font-size: 10px; }
+  .shield-hud [data-value='shield-number'] { font-size: 12px; }
+  .shield-meter { height: 5px; margin-top: 5px; }
+  .mode-hud { right: 12px; bottom: 16px; font-size: 10px; letter-spacing: .3px; }
+  .game-toolbar { grid-template-columns: minmax(92px, .8fr) minmax(0, 1.4fr) 44px; gap: 6px; }
+  .game-toolbar > button { min-height: 48px; border-radius: 7px; }
+  .auto-toggle { padding: 6px; justify-content: center; gap: 5px; }
+  .auto-toggle b { font-size: 12px; }
+  .overdrive { padding: 6px 7px; gap: 7px; justify-content: center; }
+  .overdrive b { font-size: 12px; letter-spacing: 0; }
+  .overdrive small { font-size: 11px; line-height: 1.4; margin-top: 3px; }
+  .overdrive kbd { display: none; }
+  .overdrive-icon svg { width: 18px; height: 23px; }
+  .pause-button svg { width: 20px; height: 20px; }
+  .mobile-navigation { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .mobile-navigation > button { display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; gap: 3px; min-width: 0; min-height: 52px; color: #c7e3ee; background: #142d3c; border: 1px solid #375b70; border-radius: 8px; font-size: 12px; }
+  .mobile-navigation svg { width: 22px; height: 22px; }
+  .mobile-navigation i { position: absolute; top: 4px; right: 7px; min-width: 18px; padding: 1px 4px; border-radius: 5px; font: 600 11px var(--type); font-style: normal; color: #dcf5f5; background: #355d69; }
+  .toast-region { left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right)); bottom: calc(128px + env(safe-area-inset-bottom)); width: auto; transform: none; pointer-events: none; }
+  .toast { font-size: 12px; line-height: 1.6; white-space: normal; overflow-wrap: anywhere; }
+
+  .mobile-hangar-dialog[open] { display: flex; flex-direction: column; position: fixed; inset: auto 0 0; width: 100%; max-width: none; height: min(90dvh, 850px); max-height: calc(100dvh - env(safe-area-inset-top)); margin: 0; padding: 0 max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); color: var(--text); background: #102435; border: 1px solid #678fa3; border-bottom: 0; border-radius: 16px 16px 0 0; overflow: hidden; box-shadow: 0 -12px 60px #02080dbb; }
+  .mobile-hangar-dialog::backdrop { background: #030c16bb; backdrop-filter: blur(4px); }
+  .mobile-hangar-bar { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-shrink: 0; min-height: 56px; padding: 4px; color: #adc9d7; font-size: 12px; }
+  .mobile-hangar-bar button { min-height: 44px; padding: 7px 12px; border: 1px solid #49778b; border-radius: 8px; background: #244858; font-size: 13px; color: #e0eff4; }
+  .mobile-hangar-bar button span { font-size: 19px; margin-left: 6px; }
+  .mobile-hangar-dialog .hangar { flex: 1; height: auto; min-height: 0; border: 0; background: transparent; box-shadow: none; }
+  .mobile-hangar-dialog .hangar-header { min-height: 46px; height: auto; padding: 0 4px 6px; flex-shrink: 0; }
+  .mobile-hangar-dialog .hangar-header h2 { font-size: 17px; }
+  .mobile-hangar-dialog .hangar-tools { display: none; }
+  .mobile-hangar-dialog .hangar-badge { font-size: 12px; }
+  .mobile-hangar-dialog .active-module { font-size: 11px; }
+  .mobile-hangar-dialog .resource-readout { min-height: 43px; height: auto; margin-inline: 4px; padding: 4px 0 9px; flex-shrink: 0; }
+  .mobile-hangar-dialog .credits strong { font-size: 27px; }
+  .mobile-hangar-dialog .resource-growth { font-size: 11px; }
+  .mobile-hangar-dialog .ship-readout, .mobile-hangar-dialog .hangar-footer { display: none; }
+  .mobile-hangar-dialog .mission-shortcut { width: calc(100% - 8px); margin: 0 4px 8px; padding: 10px; min-height: 48px; border-radius: 6px; }
+  .mobile-hangar-dialog .mission-shortcut [data-value='objective'] { font-size: 12px; line-height: 1.6; }
+  .mobile-hangar-dialog .hangar-tabs { min-height: 48px; height: 48px; margin-bottom: 7px; flex-shrink: 0; }
+  .mobile-hangar-dialog .hangar-tabs button { min-height: 44px; font-size: 14px; }
+  .mobile-hangar-dialog .hangar-panel:not([hidden]) { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; padding: 4px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #577c90 #102435; }
+  .mobile-hangar-dialog .loadout-section { display: flex; flex-direction: column; gap: 9px; min-height: auto; padding: 0; flex-shrink: 0; }
+  .mobile-hangar-dialog .equipment-grid { display: flex; flex-direction: column; gap: 8px; min-height: auto; overflow: visible; }
+  .mobile-hangar-dialog .equipment-slot { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 12px; min-height: 77px; height: auto; padding: 10px 12px; border-radius: 7px; }
+  .mobile-hangar-dialog .gear-thumbnail .gear-art-svg { width: 44px; height: 40px; }
+  .mobile-hangar-dialog .gear-heading b, .mobile-hangar-dialog .gear-heading > small, .mobile-hangar-dialog .gear-level { font-size: 11px; }
+  .mobile-hangar-dialog .gear-copy > strong { font-size: 14px; line-height: 1.6; white-space: normal; overflow: visible; overflow-wrap: anywhere; text-overflow: clip; }
+  .mobile-hangar-dialog .synergy-trigger, .mobile-hangar-dialog .inventory-trigger { min-height: 48px; height: auto; width: 100%; padding: 10px 12px; border-radius: 6px; justify-content: space-between; }
+  .mobile-hangar-dialog .synergy-trigger > span { display: block; font-size: 12px; }
+  .mobile-hangar-dialog .synergy-trigger small, .mobile-hangar-dialog .inventory-trigger b { font-size: 13px; }
+  .mobile-hangar-dialog .loadout-section .inventory-trigger > span { display: block; font-size: 11px; }
+  .mobile-hangar-dialog .module-section { display: block; padding: 6px 0; flex-shrink: 0; }
+  .mobile-hangar-dialog .module-section h3 { height: auto; display: flex; flex-direction: column; align-items: stretch; gap: 9px; font-size: 13px; }
+  .mobile-hangar-dialog .module-section h3 > span, .mobile-hangar-dialog .module-grid { display: none; }
+  .mobile-hangar-dialog .compact-module { display: block; height: 48px; max-width: none; width: 100%; font-size: 16px; padding: 8px 12px; }
+  .mobile-hangar-dialog .upgrade-row { flex: 0 0 auto; min-height: 105px; padding: 10px 0; }
+  .mobile-hangar-dialog .upgrade-copy h3 { font-size: 14px; }
+  .mobile-hangar-dialog .upgrade-stat, .mobile-hangar-dialog .calibration-note { font-size: 12px; line-height: 1.6; }
+  .mobile-hangar-dialog .purchase { min-width: 74px; min-height: 48px; font-size: 13px; }
+  .mobile-hangar-dialog .research-summary { display: flex; flex-direction: column; min-height: auto; flex-shrink: 0; gap: 12px; }
+  .mobile-hangar-dialog .research-branches { display: flex; flex-direction: column; gap: 8px; }
+  .mobile-hangar-dialog .research-branch-summary, .mobile-hangar-dialog .skill-tree-trigger, .mobile-hangar-dialog .prestige-button { min-height: 54px; padding: 10px; font-size: 13px; flex-shrink: 0; }
+  .mobile-hangar-dialog .research-summary > p { font-size: 12px; line-height: 1.7; }
+
+  .game-dialog:not(.inventory-dialog) { position: fixed; inset: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left)); width: auto; max-width: none; height: auto; max-height: none; margin: 0; padding: 18px 14px 12px; border-radius: 12px; overflow: hidden; }
+  .game-dialog:not(.inventory-dialog)[open] { display: flex; flex-direction: column; }
+  .game-dialog:not(.inventory-dialog) > .dialog-eyebrow { display: none; }
+  .game-dialog:not(.inventory-dialog) > h2 { flex-shrink: 0; min-height: 34px; margin: 0 44px 12px 0; font-size: 20px; line-height: 1.5; letter-spacing: .2px; outline: none; }
+  .game-dialog:not(.inventory-dialog) > .dialog-body { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #577c90 #102435; padding-right: 3px; }
+  .game-dialog:not(.inventory-dialog) .dialog-body > p { font-size: 14px; line-height: 1.8; }
+  .game-dialog:not(.inventory-dialog) .dialog-actions { flex-shrink: 0; margin-top: 12px; gap: 8px; }
+  .game-dialog:not(.inventory-dialog) .dialog-actions button { min-height: 48px; padding: 10px 12px; font-size: 14px; line-height: 1.5; white-space: normal; }
+  .game-dialog .dialog-close { min-width: 44px; width: 44px; min-height: 44px; height: 44px; right: 8px; top: 8px; border-radius: 7px; font-size: 26px; }
+  .inventory-dialog .inventory-pane-switch { color: #cbe6ee; background: #163446; border: 1px solid #477186; text-align: left; }
+  .game-dialog:not(.inventory-dialog) :is(button:not(.dialog-close), summary) { min-height: 44px; }
+  .game-dialog:not(.inventory-dialog) :is(input[type='text'], input[type='search'], select) { min-height: 44px; font-size: 16px; }
+  .manual-row { grid-template-columns: 68px minmax(0, 1fr); gap: 8px; }
+  .manual-row > span, .manual-row p { font-size: 13px; line-height: 1.75; }
+  .setting-row { min-height: 72px; }
+  .setting-row b, .setting-row > span > strong { font-size: 15px; }
+  .setting-row small { font-size: 12px; line-height: 1.6; }
+  .setting-row input { min-width: 44px; min-height: 44px; }
+  .progress-reset-setting h3 { font-size: 15px; }
+  .progress-reset-trigger { min-height: 44px; font-size: 14px; }
+  .skill-dialog .skill-wallet { flex-wrap: wrap; gap: 7px; flex-shrink: 0; }
+  .skill-dialog .skill-wallet small { font-size: 12px; line-height: 1.6; }
+  .skill-dialog .skill-branch-tabs { min-height: 48px; flex-shrink: 0; }
+  .skill-dialog .skill-branch-tabs button { min-height: 48px; font-size: 13px; }
+  .skill-dialog .skill-tree { display: flex; flex-direction: column; gap: 12px; overflow: visible; flex: 0 0 auto; }
+  .skill-dialog .skill-node { min-height: auto; padding: 14px; }
+  .skill-dialog .skill-node h3 { font-size: 16px; }
+  .skill-dialog .skill-node :is(p, small, .skill-effect, .skill-prerequisite) { font-size: 12px; line-height: 1.7; white-space: normal; }
+  .skill-dialog .skill-node button { min-height: 48px; padding: 10px; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+  .skill-dialog .skill-node button span { font-size: 12px; line-height: 1.5; }
+  .skill-dialog .skill-node button b { font-size: 15px; }
+  .skill-dialog .skill-permanence { font-size: 12px; line-height: 1.7; }
+  .records-dialog .records-tabs { min-height: 48px; gap: 5px; flex-shrink: 0; }
+  .records-dialog .records-tabs button { min-height: 48px; font-size: 13px; padding: 7px 4px; gap: 5px; }
+  .records-dialog .records-content { flex: 1; }
+  .records-dialog .records-note { font-size: 12px; line-height: 1.75; }
+  .records-dialog .mission-workspace { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+  .records-dialog .mission-roster { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 0; }
+  .records-dialog .mission-panel { display: none; grid-column: 1; grid-row: 1; }
+  .records-dialog.mission-detail-open .mission-pane-switch { display: block; flex-shrink: 0; min-height: 44px; padding: 9px 12px; text-align: left; font-size: 13px; background: #163446; color: #cbe6ee; border: 1px solid #477186; }
+  .records-dialog.mission-detail-open .mission-roster, .records-dialog.mission-detail-open .mission-banner { display: none; }
+  .records-dialog.mission-detail-open .mission-panel { display: flex; flex-direction: column; }
+  .records-dialog .mission-detail { flex: 1; min-height: 0; padding: 12px; }
+  .records-dialog .mission-detail-header { padding: 0 0 12px; margin-bottom: 12px; }
+  .records-dialog .mission-actions { flex-shrink: 0; padding: 9px 12px; }
+  .records-dialog .mission-card { min-height: 70px; padding: 9px; }
+  .records-dialog .mission-card-copy > strong { font-size: 13px; }
+  .records-dialog .mission-card-copy > span { font-size: 12px; }
+  .records-dialog .mission-card-number { display: block; }
+  .records-dialog .mission-detail { font-size: 12px; }
+  .records-dialog .mission-action-buttons button { min-height: 48px; font-size: 13px; }
+  .records-dialog .requisition-select select { min-height: 44px; height: 44px; font-size: 16px; }
+  .records-dialog .mission-title-row h3 { font-size: 16px; }
+  .loadout-dialog .loadout-content { overflow-y: auto; }
+  .loadout-dialog .loadout-tabs button { font-size: 14px; }
+  .loadout-dialog .loadout-card { padding: 12px; }
+  .loadout-dialog .loadout-card h3 { font-size: 15px; }
+  .loadout-dialog :is(.loadout-current strong, .loadout-card p, .synergy-live-card p) { font-size: 13px; line-height: 1.6; }
+}
+
+@media (max-width: 1000px) and (max-height: 500px) and (orientation: landscape) {
+  .app-shell { padding-block: max(3px, env(safe-area-inset-top)) max(3px, env(safe-area-inset-bottom)); }
+  .game-layout { grid-template-columns: minmax(0, 1fr) 66px; grid-template-rows: minmax(0, 1fr); gap: 6px; }
+  .flight-section { grid-template-rows: 44px minmax(0, 1fr) 48px; gap: 4px; }
+  .mobile-flight-summary > button { min-height: 44px; height: 44px; }
+  .mobile-navigation { grid-template-columns: minmax(0, 1fr); grid-template-rows: repeat(4, minmax(44px, 1fr)); }
+  .mobile-navigation > button { min-height: 44px; }
+  .field-hud { top: 7px; }
+  .wave-display > div > span:first-child { font-size: 29px; }
+  .field-hud .microtype { font-size: 9px; }
+  .wave-progress { top: 64px; }
+  .boss-hud { top: 73px; }
+  .mobile-hangar-dialog[open] { height: calc(100dvh - env(safe-area-inset-top)); border-radius: 0; }
+  .mobile-hangar-dialog .hangar { overflow-y: auto; display: block; }
+  .mobile-hangar-dialog .hangar-panel:not([hidden]) { overflow: visible; }
+  .mobile-hangar-dialog .equipment-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .game-dialog:not(.inventory-dialog) { padding-block: 9px; }
+  .game-dialog:not(.inventory-dialog) > h2 { font-size: 18px; min-height: 27px; margin-bottom: 7px; }
+  .game-dialog:not(.inventory-dialog) .dialog-actions { margin-top: 7px; }
+  .records-dialog .mission-workspace { grid-template-columns: minmax(180px, .7fr) minmax(0, 1.4fr); grid-template-rows: minmax(0, 1fr); }
+  .records-dialog .mission-roster { display: flex; grid-column: 1; grid-row: 1; }
+  .records-dialog .mission-panel, .records-dialog.mission-detail-open .mission-panel { display: flex; flex-direction: column; grid-column: 2; grid-row: 1; }
+  .records-dialog.mission-detail-open .mission-roster, .records-dialog.mission-detail-open .mission-banner { display: flex; }
+  .records-dialog.mission-detail-open .mission-pane-switch { display: none; }
+  .toast-region { bottom: 58px; right: 82px; }
+}
