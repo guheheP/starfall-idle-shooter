@@ -537,3 +537,135 @@
   .inventory-dialog:is(.bulk-review-active, .referenced-sale-active, .inventory-settings-open) h2 { padding-left: 0; }
   .inventory-dialog:is(.bulk-review-active, .referenced-sale-active, .inventory-settings-open) .inventory-pane-switch { display: none; }
 }
+
+/* Compact equipment tiles keep the collection visible; the inspect pane holds the full item data. */
+.inventory-dialog .inventory-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  grid-auto-rows: 84px;
+  align-content: start;
+  align-items: stretch;
+  gap: 8px;
+  padding: 4px;
+  scroll-padding-block: 8px;
+}
+.inventory-dialog .inventory-pagination { display: none; }
+.inventory-dialog .inventory-empty { grid-column: 1 / -1; }
+.inventory-dialog .loot-card {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 84px;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: 0;
+  gap: 0;
+  border: 1px solid color-mix(in srgb, var(--rarity-color) 65%, #263d50);
+  border-radius: 5px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--rarity-color) 9%, #182f40), #091928 80%);
+  box-shadow: inset 0 1px #d7eeff0c, inset 0 -2px #0004;
+  color: var(--inventory-ink);
+  text-align: center;
+  touch-action: manipulation;
+}
+.inventory-dialog .loot-card::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  bottom: 9px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--rarity-color);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--rarity-color) 45%, transparent);
+  pointer-events: none;
+}
+.inventory-dialog .loot-card::after {
+  top: 2px;
+  right: 2px;
+  width: 7px;
+  height: 7px;
+  border: 0;
+  opacity: 0;
+}
+.inventory-dialog .loot-card:hover {
+  border-color: var(--rarity-color);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--rarity-color) 15%, #203a4d), #102638 80%);
+}
+.inventory-dialog .loot-card.selected {
+  border-width: 1px;
+  border-color: var(--rarity-color);
+  outline: 2px solid #a2edf5;
+  outline-offset: 1px;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--rarity-color) 13%, #224553), #102637 80%);
+  box-shadow: inset 0 0 0 1px #a2edf51a, inset 0 1px #e6ffff18;
+}
+.inventory-dialog .loot-card.selected::after {
+  border-top: 2px solid #d3fbff;
+  border-right: 2px solid #d3fbff;
+  opacity: 1;
+}
+.inventory-dialog .loot-card:focus-visible { outline: 2px solid #e0fbff; outline-offset: 1px; }
+.inventory-dialog .loot-tile-art {
+  position: absolute;
+  inset: 20px 6px 23px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.inventory-dialog .loot-tile-art .gear-art-svg {
+  display: block;
+  width: 48px;
+  height: 35px;
+  max-width: 100%;
+  filter: drop-shadow(0 2px 2px #0008);
+}
+.inventory-dialog .loot-tile-level {
+  position: absolute;
+  inset: auto 4px 5px 14px;
+  color: #cfe3ef;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.inventory-dialog .loot-tile-enhancement {
+  position: absolute;
+  top: 5px;
+  right: 7px;
+  max-width: 45%;
+  color: #e5d5b5;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.inventory-dialog .loot-tile-state {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  max-width: 50%;
+  color: #c7b7e0;
+  pointer-events: none;
+}
+.inventory-dialog .loot-tile-state svg { flex: 0 0 12px; width: 12px; height: 12px; }
+.inventory-dialog .loot-tile-state .loot-tile-equipped { color: #abf1d2; }
+
+@media (max-width: 760px), (max-height: 500px) and (max-width: 1000px) {
+  .inventory-dialog .inventory-list {
+    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+    grid-auto-rows: 82px;
+    gap: 6px;
+    padding: 3px;
+  }
+  .inventory-dialog .loot-card { height: 82px; min-height: 44px; padding: 0; gap: 0; }
+  .inventory-dialog .loot-tile-art .gear-art-svg { width: 44px; height: 33px; }
+}

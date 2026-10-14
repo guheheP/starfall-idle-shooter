@@ -140,6 +140,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
   let destroyed = false;
   let inventoryCategory: InventoryCategory = 'weapon';
   let selectedItemId = sim.state.equippedWeaponId;
+  let inventoryFocusId = selectedItemId;
   let inventoryFilter = 'all';
   let inventoryTypeFilter = 'all';
   let inventorySort = 'newest';
@@ -147,6 +148,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
   let inventorySearch = '';
   let inventorySearchTimer: ReturnType<typeof setTimeout> | undefined;
   let inventoryPage = 0;
+  let inventoryScrollTop = 0;
   let inventoryExpanded = false;
   let inventorySignature = '';
   let bulkReview = false;
@@ -170,7 +172,15 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
   let pendingReferencedSale: string | null = null;
   let inspectScrollItemId = '';
   let inspectScrollTop = 0;
-  const inventoryPageSize = 4;
+  const inventoryPageSize = INVENTORY_CAPACITY;
+
+  function resetInventoryListPosition(): void {
+    inventoryPage = 0;
+    inventoryScrollTop = 0;
+    inventoryFocusId = '';
+    const list = app!.querySelector<HTMLElement>('.inventory-list');
+    if (list) list.scrollTop = 0;
+  }
 
   const categoryLabel = (category: InventoryCategory) => category === 'weapon' ? '武器' : PART_SLOTS.find(slot => slot.id === category)!.label;
   const equippedItem = (category: InventoryCategory): LootItem => category === 'weapon' ? sim.getEquippedWeapon() : sim.getEquippedPart(category);
@@ -404,7 +414,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     <div class="inventory-active-filters" data-inventory="active-filters" hidden></div>
     <div class="bulk-review" data-inventory="bulk-review" hidden></div><div class="referenced-sale-review" data-inventory="referenced-sale" hidden></div>
     <button class="inventory-pane-switch" data-action="inventory-view" aria-expanded="false">選択装備を詳しく比較</button>
-    <div class="inventory-workspace"><section class="inventory-roster" aria-label="保管中の装備"><div class="inventory-list" data-inventory="list"></div><div class="inventory-pagination"><button data-action="inventory-prev" aria-label="前のページ">‹</button><span data-inventory="page"></span><button data-action="inventory-next" aria-label="次のページ">›</button></div></section><section class="inventory-inspect" data-inventory="detail" aria-label="選択した装備の性能"></section></div>
+    <div class="inventory-workspace"><section class="inventory-roster" aria-label="保管中の装備"><div class="inventory-list" data-inventory="list"></div><div class="inventory-pagination" hidden><button data-action="inventory-prev" aria-label="前のページ">‹</button><span data-inventory="page"></span><button data-action="inventory-next" aria-label="次のページ">›</button></div></section><section class="inventory-inspect" data-inventory="detail" aria-label="選択した装備の性能"></section></div>
     <div class="inventory-summary" data-inventory="summary" title="武器64枠・機体パーツ共通64枠。装備中・保護中・初期装備は売却されません。"></div>`;
 
   function renderInventory(): void {
@@ -412,16 +422,18 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     const signature = JSON.stringify([sim.state.inventory, sim.state.parts, sim.state.loadouts, sim.state.equippedWeaponId, sim.state.equippedParts, sim.state.autoSellRarity, sim.state.lootStats, sim.state.upgrades, sim.state.skills, sim.state.credits, sim.state.module, sim.state.mastery, inventoryCategory, inventoryFilter, inventoryTypeFilter, inventorySort, inventoryOwnership, inventorySearch, inventoryPage, inventoryExpanded, selectedItemId, bulkReview, showAllSynergies, pendingReferencedSale]);
     if (signature === inventorySignature) return;
     inventorySignature = signature;
-    dialog.classList.toggle('inventory-compare-view', inventoryExpanded);
-    const paneSwitch = query<HTMLButtonElement>('.inventory-pane-switch');
-    paneSwitch.textContent = inventoryExpanded ? '← 装備一覧に戻る' : '選択装備を詳しく比較';
-    paneSwitch.setAttribute('aria-expanded', String(inventoryExpanded));
+    const list = query<HTMLElement>('.inventory-list');
+    if (list.getClientRects().length) inventoryScrollTop = list.scrollTop;
     const detail = query('[data-inventory="detail"]');
     const previousReadingArea = detail.querySelector<HTMLElement>('.inspect-scroll');
     if (previousReadingArea && previousReadingArea.getClientRects().length > 0) {
       inspectScrollItemId = detail.dataset.itemId ?? '';
       inspectScrollTop = previousReadingArea.scrollTop;
     }
+    dialog.classList.toggle('inventory-compare-view', inventoryExpanded);
+    const paneSwitch = query<HTMLButtonElement>('.inventory-pane-switch');
+    paneSwitch.textContent = inventoryExpanded ? '← 装備一覧に戻る' : '選択装備を詳しく比較';
+    paneSwitch.setAttribute('aria-expanded', String(inventoryExpanded));
     const control = (id: string) => query<HTMLSelectElement>(`[data-inventory-control="${id}"]`);
     control('auto-sell').value = sim.state.autoSellRarity ?? 'off';
     control('rarity').value = inventoryFilter;
@@ -447,6 +459,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     filterSummary.hidden = activeFilters.length === 0;
     filterSummary.innerHTML = activeFilters.length ? `<span title="${escapeHTML(activeFilters.join(' / '))}">絞り込み中 · ${filtered.length}件 <small>${activeFilters.map(escapeHTML).join(' / ')}</small></span><button data-action="reset-inventory-filters">解除</button>` : '';
     filtered.sort((a, b) => inventorySort === 'rarity' ? rarityInfo(b.rarity).rank - rarityInfo(a.rarity).rank || b.level - a.level : inventorySort === 'dps' ? itemMetric(b) - itemMetric(a) : inventorySort === 'level' ? b.level - a.level : b.acquiredAt - a.acquiredAt);
+    if (!filtered.some(item => item.id === inventoryFocusId)) inventoryFocusId = filtered.find(item => item.id === selectedItemId)?.id ?? filtered[0]?.id ?? '';
     const pageCount = Math.max(1, Math.ceil(filtered.length / inventoryPageSize));
     inventoryPage = Math.min(inventoryPage, pageCount - 1);
     if (!categoryItems.some(item => item.id === selectedItemId)) selectedItemId = equippedItem(inventoryCategory).id;
@@ -454,8 +467,9 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     query('[data-inventory="list"]').innerHTML = filtered.length ? filtered.slice(inventoryPage * inventoryPageSize, (inventoryPage + 1) * inventoryPageSize).map(item => {
       const rarity = rarityInfo(item.rarity);
       const equipped = item.id === equippedItem(inventoryCategory).id;
-      const feature = isWeapon(item) ? `DPS ${format(sim.getWeaponPreview(item).dps)}` : sim.getPartPreview(item).effects[0] ?? itemBase(item).name;
-      return `<button class="loot-card ${item.id === selectedItemId ? 'selected' : ''}" data-action="inspect-weapon" data-id="${escapeHTML(item.id)}" aria-pressed="${item.id === selectedItemId}" style="--rarity-color:${cssColor(rarity.color)}"><span class="loot-emblem">${icon(itemGlyph(item))}</span><span class="loot-copy"><span class="loot-meta"><span class="rarity-mark" title="${rarity.label}" role="img" aria-label="${rarity.label}"></span><span>拾得Lv.${item.level}</span><span class="enhancement-badge">+${enhancementLevel(item)}</span>${equipped ? '<b>装備中</b>' : item.starter ? '<b>初期装備</b>' : item.locked ? `<b>${icon('lock')}保護</b>` : ''}</span><strong>${escapeHTML(item.name)}</strong><span class="loot-bottom"><span>${itemBase(item).name}</span><span title="${escapeHTML(feature)}">${escapeHTML(feature)} · 副次 ${item.affixes.length}</span></span></span></button>`;
+      const status = equipped ? '装備中' : item.starter || item.locked ? '保護中' : '';
+      const label = `${item.name}、${itemBase(item).name}、${rarity.label}、拾得Lv.${item.level}、強化+${enhancementLevel(item)}${status ? `、${status}` : ''}`;
+      return `<button class="loot-card ${item.id === selectedItemId ? 'selected' : ''}" data-action="inspect-weapon" data-id="${escapeHTML(item.id)}" aria-label="${escapeHTML(label)}" title="${escapeHTML(label)}" tabindex="${item.id === inventoryFocusId ? 0 : -1}" aria-pressed="${item.id === selectedItemId}" style="--rarity-color:${cssColor(rarity.color)}"><span class="loot-tile-rarity" aria-hidden="true"></span><span class="loot-tile-art" aria-hidden="true">${gearArt(item)}</span><span class="loot-tile-level" aria-hidden="true">Lv.${item.level}</span><span class="loot-tile-enhancement" aria-hidden="true">+${enhancementLevel(item)}</span>${status ? `<span class="loot-tile-state" aria-hidden="true">${equipped ? '<svg class="loot-tile-equipped" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg>' : icon('lock')}</span>` : ''}</button>`;
     }).join('') : '<div class="inventory-empty"><p>この条件の装備はありません。</p><button data-action="reset-inventory-filters">絞り込みを解除</button></div>';
     query('[data-inventory="page"]').textContent = `${inventoryPage + 1} / ${pageCount} · ${filtered.length} 件`;
     query<HTMLButtonElement>('[data-action="inventory-prev"]').disabled = inventoryPage <= 0;
@@ -510,6 +524,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     dialog.classList.toggle('referenced-sale-active', !!saleItem);
     if (saleItem) saleReview.innerHTML = `<section><span class="microtype">REFERENCED EQUIPMENT</span><h3>「${escapeHTML(saleItem.name)}」を売却します</h3><p>次の保存構成は欠品状態になり、呼び出せなくなります。</p><ul>${sim.getLoadoutReferences(saleItem.id).map(name => `<li>${escapeHTML(name)}</li>`).join('')}</ul><strong>＋${fee(sellValue(saleItem))} CR</strong><div><button data-action="cancel-referenced-sale">装備を残す</button><button class="confirm-referenced-sale" data-action="confirm-referenced-sale" data-id="${escapeHTML(saleItem.id)}" ${protectedItem(saleItem) ? 'disabled' : ''}>欠品になることを確認して売却</button></div></section>`;
     query<HTMLElement>('.inspect-scroll').scrollTop = inspectScrollTop;
+    if (list.getClientRects().length) list.scrollTop = inventoryScrollTop;
     query('[data-inventory="summary"]').textContent = `武器 ${sim.state.inventory.length}/${INVENTORY_CAPACITY} · パーツ ${sim.state.parts.length}/${PART_CAPACITY} · 回収 ${sim.state.lootStats.found} · 売却 ${sim.state.lootStats.sold} 件 / ${format(sim.state.lootStats.soldCredits)} CR`;
     if (focused?.action) {
       const button = Array.from(dialog.querySelectorAll<HTMLButtonElement>('[data-action]')).find(candidate => candidate.dataset.action === focused.action && candidate.dataset.id === focused.id);
@@ -529,7 +544,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     if (!dialog.open || resetPending) return;
     if (dialogType === 'inventory') {
       const search = query<HTMLInputElement>('[data-inventory-control="search"]').value;
-      if (search !== inventorySearch) inventoryPage = 0;
+      if (search !== inventorySearch) resetInventoryListPosition();
       inventorySearch = search;
       if (inventorySearchTimer) clearTimeout(inventorySearchTimer);
       inventorySearchTimer = undefined;
@@ -692,7 +707,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     inventoryExpanded = false;
     inventoryCategory = category;
     selectedItemId = equippedItem(category).id;
-    inventoryPage = 0;
+    resetInventoryListPosition();
     bulkReview = false;
     pendingReferencedSale = null;
     showAllSynergies = false;
@@ -811,11 +826,11 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     if (action === 'clear-inventory-search') {
       if (inventorySearchTimer) clearTimeout(inventorySearchTimer);
       inventorySearchTimer = undefined;
-      inventorySearch = ''; inventoryPage = 0; inventoryExpanded = false;
+      inventorySearch = ''; resetInventoryListPosition(); inventoryExpanded = false;
       query<HTMLInputElement>('[data-inventory-control="search"]').value = '';
     }
     if (action === 'reset-inventory-filters') {
-      inventoryFilter = inventoryTypeFilter = inventoryOwnership = 'all'; inventorySearch = ''; inventoryPage = 0; inventoryExpanded = false;
+      inventoryFilter = inventoryTypeFilter = inventoryOwnership = 'all'; inventorySearch = ''; resetInventoryListPosition(); inventoryExpanded = false;
       if (inventorySearchTimer) clearTimeout(inventorySearchTimer);
       inventorySearchTimer = undefined;
       query<HTMLInputElement>('[data-inventory-control="search"]').value = '';
@@ -826,7 +841,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     if (action === 'overdrive') { if (sim.activateOverdrive() !== false) toast('オーバードライブ発動！', 'power'); }
     if (action === 'upgrade' && sim.buyUpgrade(id as UpgradeId) !== false) toast(`${upgrades.find(item => item.id === id)?.name}を強化しました`);
     if (action === 'enhance-equipment' && sim.enhanceEquipment(id!)) toast(`${ownedItem(id!)?.name}を +${enhancementLevel(ownedItem(id!)!)} に強化しました`, 'power');
-    if (action === 'inspect-weapon') { selectedItemId = id!; bulkReview = false; inventoryExpanded = true; }
+    if (action === 'inspect-weapon') { selectedItemId = inventoryFocusId = id!; bulkReview = false; inventoryExpanded = true; }
     if (action === 'inventory-view') inventoryExpanded = !inventoryExpanded;
     if (action === 'inventory-prev') inventoryPage = Math.max(0, inventoryPage - 1);
     if (action === 'inventory-next') inventoryPage += 1;
@@ -853,6 +868,10 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     render();
     if (action === 'clear-inventory-search' || action === 'reset-inventory-filters') query<HTMLInputElement>('[data-inventory-control="search"]').focus({ preventScroll: true });
     if (action === 'inspect-weapon' && canFocusButton(query<HTMLButtonElement>('.inventory-pane-switch'))) query<HTMLButtonElement>('.inventory-pane-switch').focus({ preventScroll: true });
+    if (action === 'inventory-view' && !inventoryExpanded) {
+      const card = Array.from(dialog.querySelectorAll<HTMLButtonElement>('[data-action="inspect-weapon"]')).find(candidate => candidate.dataset.id === selectedItemId);
+      card?.focus({ preventScroll: true });
+    }
     if (action === 'inspect-mission' && canFocusButton(query<HTMLButtonElement>('.mission-pane-switch'))) query<HTMLButtonElement>('.mission-pane-switch').focus({ preventScroll: true });
     if ((action === 'save-loadout' || action === 'delete-loadout') && pendingLoadout) query<HTMLButtonElement>('[data-action="confirm-loadout-review"]').focus({ preventScroll: true });
     if (action === 'sell-weapon' && pendingReferencedSale) query<HTMLButtonElement>('[data-action="confirm-referenced-sale"]').focus({ preventScroll: true });
@@ -887,11 +906,11 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     const input = event.target as HTMLInputElement | HTMLSelectElement;
     if (input.dataset.missionControl === 'reward-model' && isRequisitionModel(input.value)) requisitionModel = input.value;
     if (input.dataset.inventoryControl === 'auto-sell') { sim.setAutoSellRarity(input.value === 'off' ? null : input.value as WeaponRarity); bulkReview = false; toast(input.value === 'off' ? 'レア度による自動売却を OFF にしました' : `${rarityInfo(input.value as WeaponRarity).label}以下の取得装備を自動売却します`); }
-    if (input.dataset.inventoryControl === 'rarity') { inventoryFilter = input.value; inventoryPage = 0; }
-    if (input.dataset.inventoryControl === 'type') { inventoryTypeFilter = input.value; inventoryPage = 0; }
+    if (input.dataset.inventoryControl === 'rarity') { inventoryFilter = input.value; resetInventoryListPosition(); }
+    if (input.dataset.inventoryControl === 'type') { inventoryTypeFilter = input.value; resetInventoryListPosition(); }
     if (['rarity', 'type', 'sort', 'ownership'].includes(input.dataset.inventoryControl ?? '')) inventoryExpanded = false;
-    if (input.dataset.inventoryControl === 'sort') { inventorySort = input.value; inventoryPage = 0; }
-    if (input.dataset.inventoryControl === 'ownership') { inventoryOwnership = input.value; inventoryPage = 0; }
+    if (input.dataset.inventoryControl === 'sort') { inventorySort = input.value; resetInventoryListPosition(); }
+    if (input.dataset.inventoryControl === 'ownership') { inventoryOwnership = input.value; resetInventoryListPosition(); }
     if (input.dataset.setting === 'module' && sim.setModule(input.value as ModuleId)) toast(`${moduleUI[input.value as ModuleId].name}モジュールに換装しました`);
     if (input instanceof HTMLInputElement && input.dataset.setting === 'sound') sim.state.sound = input.checked;
     if (input instanceof HTMLInputElement && input.dataset.setting === 'effects') sim.state.effects = input.checked;
@@ -908,7 +927,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     if (inventorySearchTimer) clearTimeout(inventorySearchTimer);
     query<HTMLButtonElement>('.inventory-search-clear').hidden = !field.value;
     const search = field.value;
-    inventorySearchTimer = setTimeout(() => { inventorySearch = search; inventoryPage = 0; inventoryExpanded = false; render(); }, 160);
+    inventorySearchTimer = setTimeout(() => { inventorySearch = search; resetInventoryListPosition(); inventoryExpanded = false; render(); }, 160);
   };
   const toggleTools = (event: Event): void => {
     if (!(event.target instanceof HTMLDetailsElement) || !event.target.classList.contains('inventory-tools')) return;
@@ -945,6 +964,20 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
       else if (!dialog.open) openDialog('pause');
     }
     const target = event.target as HTMLElement;
+    if (target.dataset.action === 'inspect-weapon' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) {
+      const cards = Array.from(dialog.querySelectorAll<HTMLButtonElement>('[data-action="inspect-weapon"]')).filter(card => card.getClientRects().length);
+      const current = cards.indexOf(target as HTMLButtonElement);
+      if (current < 0 || !cards.length) return;
+      event.preventDefault();
+      const columns = cards.filter(card => Math.abs(card.offsetTop - cards[0].offsetTop) < 1).length || 1;
+      const offset = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -columns, ArrowDown: columns }[event.key];
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? cards.length - 1 : Math.max(0, Math.min(cards.length - 1, current + (offset ?? 0)));
+      inventoryFocusId = cards[next].dataset.id!;
+      cards.forEach((card, index) => { card.tabIndex = index === next ? 0 : -1; });
+      cards[next].focus({ preventScroll: true });
+      cards[next].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      return;
+    }
     if (target.getAttribute('role') === 'tab' && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
       event.preventDefault();
       if (target.dataset.action === 'records-tab') {
