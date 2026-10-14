@@ -1,5 +1,6 @@
 @import './shell-polish.css';
 @import './inventory-polish.css';
+@import './equipment-detail.css';
 @import './mission-polish.css';
 
 /* Rarity remains readable as a small colored signal, including assistive labels. */

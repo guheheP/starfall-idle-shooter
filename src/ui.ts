@@ -17,6 +17,10 @@ import { getPwaState, subscribePwaState, installPwa } from './pwa';
 type LootItem = WeaponItem | PartItem;
 type InventoryCategory = 'weapon' | PartSlot;
 type RecordsTab = 'navigation' | 'collection' | 'missions';
+type EquipmentDetailTab = 'overview' | 'enhancement' | 'synergies';
+const EQUIPMENT_DETAIL_TABS: { id: EquipmentDetailTab; label: string }[] = [
+  { id: 'overview', label: '性能' }, { id: 'enhancement', label: '強化' }, { id: 'synergies', label: '相性' },
+];
 const isWeapon = (item: LootItem): item is WeaponItem => 'type' in item;
 
 const icons: Record<string, string> = {
@@ -173,7 +177,8 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
   let pendingLoadout: { slot: LoadoutSlot; kind: 'save' | 'delete'; name?: string } | null = null;
   let pendingReferencedSale: string | null = null;
   let inspectScrollItemId = '';
-  let inspectScrollTop = 0;
+  let inspectTab: EquipmentDetailTab = 'overview';
+  const inspectScroll = { overview: 0, enhancement: 0, synergies: 0 };
   const inventoryPageSize = INVENTORY_CAPACITY;
 
   function resetInventoryListPosition(): void {
@@ -421,7 +426,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
 
   function renderInventory(): void {
     if (dialogType !== 'inventory') return;
-    const signature = JSON.stringify([sim.state.inventory, sim.state.parts, sim.state.loadouts, sim.state.equippedWeaponId, sim.state.equippedParts, sim.state.autoSellRarity, sim.state.lootStats, sim.state.upgrades, sim.state.skills, sim.state.credits, sim.state.module, sim.state.mastery, inventoryCategory, inventoryFilter, inventoryTypeFilter, inventorySort, inventoryOwnership, inventorySearch, inventoryPage, inventoryExpanded, selectedItemId, bulkReview, showAllSynergies, pendingReferencedSale]);
+    const signature = JSON.stringify([sim.state.inventory, sim.state.parts, sim.state.loadouts, sim.state.equippedWeaponId, sim.state.equippedParts, sim.state.autoSellRarity, sim.state.lootStats, sim.state.upgrades, sim.state.skills, sim.state.credits, sim.state.module, sim.state.mastery, inventoryCategory, inventoryFilter, inventoryTypeFilter, inventorySort, inventoryOwnership, inventorySearch, inventoryPage, inventoryExpanded, selectedItemId, inspectTab, bulkReview, showAllSynergies, pendingReferencedSale]);
     if (signature === inventorySignature) return;
     inventorySignature = signature;
     const list = query<HTMLElement>('.inventory-list');
@@ -430,7 +435,8 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     const previousReadingArea = detail.querySelector<HTMLElement>('.inspect-scroll');
     if (previousReadingArea && previousReadingArea.getClientRects().length > 0) {
       inspectScrollItemId = detail.dataset.itemId ?? '';
-      inspectScrollTop = previousReadingArea.scrollTop;
+      const previousTab = previousReadingArea.dataset.detailPane as EquipmentDetailTab;
+      if (previousTab in inspectScroll) inspectScroll[previousTab] = previousReadingArea.scrollTop;
     }
     dialog.classList.toggle('inventory-compare-view', inventoryExpanded);
     const paneSwitch = query<HTMLButtonElement>('.inventory-pane-switch');
@@ -478,13 +484,18 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     query<HTMLButtonElement>('[data-action="inventory-prev"]').disabled = inventoryPage <= 0;
     query<HTMLButtonElement>('[data-action="inventory-next"]').disabled = inventoryPage >= pageCount - 1;
     const item = categoryItems.find(owned => owned.id === selectedItemId) ?? equippedItem(inventoryCategory);
-    if (inspectScrollItemId !== item.id) { inspectScrollItemId = item.id; inspectScrollTop = 0; }
+    if (inspectScrollItemId !== item.id) {
+      inspectScrollItemId = item.id;
+      inspectTab = 'overview';
+      inspectScroll.overview = inspectScroll.enhancement = inspectScroll.synergies = 0;
+    }
     detail.dataset.itemId = item.id;
     const rarity = rarityInfo(item.rarity);
     const equipped = item.id === equippedItem(inventoryCategory).id;
     const references = sim.getLoadoutReferences(item.id);
     const referenceMarkup = references.length ? `<div class="loadout-references">${icon('inventory')}<span>保存構成 ${references.length}件：${references.map(escapeHTML).join(' / ')}<small>一括整理・満杯時売却から保護</small></span></div>` : '';
     const delta = (value: number, baseline: number, unit = '%') => {
+      if (equipped) return '';
       const ratio = baseline > 0 ? (value / baseline - 1) * 100 : value;
       return `<small class="${ratio > .05 ? 'comparison-up' : ratio < -.05 ? 'comparison-down' : ''}">${equipped || Math.abs(ratio) < .05 ? '±0' + (baseline > 0 ? '%' : unit) : `${ratio > 0 ? '+' : ''}${precision(ratio)}${baseline > 0 ? '%' : unit}`}</small>`;
     };
@@ -494,14 +505,15 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     if (isWeapon(item)) {
       const preview = sim.getWeaponPreview(item);
       const current = sim.getWeaponPreview(sim.getEquippedWeapon());
-      performance = `<div class="comparison-caption">装備中の武器と比較 <span>主弾・会心の目安</span></div><div class="weapon-comparison"><div><span>一発の威力</span><strong>${precision(preview.damage)}</strong><small class="comparison-baseline">現 ${precision(current.damage)}</small>${delta(preview.damage, current.damage)}</div><div><span>射撃 / 秒</span><strong>${precision(preview.fireRate)}</strong><small class="comparison-baseline">現 ${precision(current.fireRate)}</small>${delta(preview.fireRate, current.fireRate)}</div><div><span>期待 DPS</span><strong>${format(preview.dps)}</strong><small class="comparison-baseline">現 ${format(current.dps)}</small>${delta(preview.dps, current.dps)}</div></div><div class="critical-readout">会心率 ${precision(preview.critChance * 100)}% <span>会心威力 ×${precision(preview.critMultiplier)}</span></div>`;
       const mastery = sim.getMastery(item.type);
-      fixedEffects = `<p class="part-fixed-effect">系統熟練 ${mastery.level} · 威力 +${Math.round(mastery.bonus * 100)}%</p>`;
+      const baseline = (value: number) => equipped ? '' : `<small class="comparison-baseline">現 ${precision(value)}</small>`;
+      performance = `<div class="comparison-caption">${equipped ? '装備性能' : '装備中と比較'} <span>主弾・会心の目安</span></div><div class="weapon-comparison"><div><span>威力 / 発</span><strong>${precision(preview.damage)}</strong>${baseline(current.damage)}${delta(preview.damage, current.damage)}</div><div><span>射撃 / 秒</span><strong>${precision(preview.fireRate)}</strong>${baseline(current.fireRate)}${delta(preview.fireRate, current.fireRate)}</div><div><span>期待 DPS</span><strong>${format(preview.dps)}</strong>${baseline(current.dps)}${delta(preview.dps, current.dps)}</div></div><div class="critical-readout"><span>会心 ${precision(preview.critChance * 100)}% / ×${precision(preview.critMultiplier)}</span><span>熟練 ${mastery.level} / 威力 +${Math.round(mastery.bonus * 100)}%</span></div>`;
       affixes = item.affixes.map(getAffixText);
     } else {
       const preview = sim.getPartPreview(item);
       const current = sim.getPartPreview(sim.getEquippedPart(item.slot));
-      performance = `<div class="comparison-caption">装備中の${categoryLabel(item.slot)}と比較 <span>固有性能</span></div><div class="weapon-comparison part-comparison">${preview.stats.map(stat => { const currentStat = current.stats.find(value => value.label === stat.label); const baseline = currentStat?.value ?? 0; return `<div><span>${escapeHTML(stat.label)}</span><strong>${precision(stat.value)}<em>${escapeHTML(stat.unit)}</em></strong><small class="comparison-baseline">${currentStat ? `現 ${precision(baseline)} ${escapeHTML(stat.unit)}` : "現装備 —"}</small>${currentStat ? delta(stat.value, baseline, stat.unit) : '<small class="comparison-new">新規効果</small>'}</div>`; }).join('')}</div>`;
+      const visibleStats = preview.stats.filter(stat => stat.value !== 0 || (current.stats.find(value => value.label === stat.label)?.value ?? 0) !== 0);
+      performance = `<div class="comparison-caption">${equipped ? '固有性能' : `装備中の${categoryLabel(item.slot)}と比較`}</div><div class="weapon-comparison part-comparison" data-stat-count="${visibleStats.length}">${visibleStats.map(stat => { const currentStat = current.stats.find(value => value.label === stat.label); const baseline = currentStat?.value ?? 0; return `<div><span>${escapeHTML(stat.label)}</span><strong>${precision(stat.value)}<em>${escapeHTML(stat.unit)}</em></strong>${equipped ? '' : `<small class="comparison-baseline">${currentStat ? `現 ${precision(baseline)} ${escapeHTML(stat.unit)}` : '現装備 —'}</small>${currentStat ? delta(stat.value, baseline, stat.unit) : '<small class="comparison-new">新規効果</small>'}`}</div>`; }).join('')}</div>`;
       fixedEffects = `<div class="part-fixed-effects">${preview.effects.map(effect => `<p class="part-fixed-effect">${escapeHTML(effect)}</p>`).join('')}</div>`;
       affixes = item.affixes.map(getPartAffixText);
     }
@@ -511,7 +523,18 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     const compactSell = equipped ? '装備中' : item.starter ? '初期装備' : item.locked ? '保護中' : `売却 ${format(sellValue(item))} CR`;
     const description = isWeapon(item) ? `<p class="weapon-description">${itemBase(item).description}</p>` : '';
     const refundMarkup = enhancementLevel(item) > 0 && !item.starter ? `<p class="part-fixed-effect">売却額には強化費の50%（${fee(getEnhancementRefund(item))} CR）を含みます。</p>` : '';
-    query('[data-inventory="detail"]').innerHTML = `${enhancementActionMarkup(item)}<div class="inspect-scroll"><div class="inspect-header" style="--rarity-color:${cssColor(rarity.color)}"><div class="inspect-art">${gearArt(item)}<span></span></div><div><span class="rarity-label"><span class="rarity-mark" title="${rarity.label}" role="img" aria-label="${rarity.label}"></span>拾得Lv.${item.level} · 強化+${enhancementLevel(item)}</span><h3 title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</h3><small>${itemBase(item).name}${item.starter ? ' · 初期装備' : ''}</small></div></div>${performance}${referenceMarkup}${matchedEnhancementMarkup(item)}${enhancementMarkup(item)}${refundMarkup}${description}${fixedEffects}<h4 class="affix-heading">ランダム副次効果 <span>${affixes.length} AFFIXES</span></h4><ul class="affix-list">${affixes.length ? affixes.map(affix => `<li>${escapeHTML(affix)}</li>`).join('') : '<li class="affix-none">副次効果なし。敵から装備を回収して更新しよう。</li>'}</ul><h4 class="affix-heading">現在の組み合わせ</h4><ul class="synergy-list">${synergyText}</ul><button class="synergy-details" data-action="synergy-details">相性のヒントを見る</button></div><div class="inspect-actions"><button class="equip-weapon" data-action="equip-weapon" data-id="${escapeHTML(item.id)}" ${equipped ? 'disabled' : ''}><span class="action-full">${equipped ? '装備中' : 'この装備を使う'}</span><span class="action-compact">${equipped ? '装備中' : '装備'}</span></button><button class="lock-weapon ${item.locked ? 'locked' : ''}" data-action="lock-weapon" data-id="${escapeHTML(item.id)}" aria-pressed="${item.locked}" ${item.starter ? 'disabled' : ''}>${icon('lock')}<span class="action-full">${item.locked ? '保護中' : '保護する'}</span><span class="action-compact">${item.locked ? '保護中' : '保護'}</span></button><button class="sell-weapon" data-action="sell-weapon" data-id="${escapeHTML(item.id)}" title="${sellProtection}" aria-label="${sellProtection}" ${protectedItem(item) ? 'disabled' : ''}><span class="action-full">${sellProtection}</span><span class="action-compact">${compactSell}</span></button></div>`;
+    detail.dataset.detailTab = inspectTab;
+    const status = [equipped ? '装備中' : '', item.starter ? '初期装備' : item.locked ? '保護中' : ''].filter(Boolean).join(' / ');
+    detail.innerHTML = `
+      <div class="inspect-header" style="--rarity-color:${cssColor(rarity.color)}"><div class="inspect-art">${gearArt(item)}<span></span></div><div><h3 title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</h3><small class="rarity-label"><span class="rarity-mark" title="${rarity.label}" role="img" aria-label="${rarity.label}"></span>${itemBase(item).name} · Lv.${item.level} · +${enhancementLevel(item)}${status ? `<span class="inspect-status">${status}</span>` : ''}</small></div></div>
+      <div class="inspect-tabs" role="tablist" aria-label="装備の詳細">${EQUIPMENT_DETAIL_TABS.map(tab => `<button id="inspect-tab-${tab.id}" data-action="inspect-tab" data-id="${tab.id}" role="tab" aria-controls="inspect-panel-${tab.id}" aria-selected="${inspectTab === tab.id}" tabindex="${inspectTab === tab.id ? 0 : -1}">${tab.label}</button>`).join('')}</div>
+      <div class="inspect-scroll" data-detail-pane="${inspectTab}">
+        <section id="inspect-panel-overview" class="inspect-overview" role="tabpanel" tabindex="0" aria-labelledby="inspect-tab-overview" ${inspectTab === 'overview' ? '' : 'hidden'}><div class="inspect-performance">${performance}</div><div class="inspect-effects">${description}${fixedEffects}<h4 class="affix-heading">副次効果 <span>${affixes.length}件</span></h4><ul class="affix-list">${affixes.length ? affixes.map(affix => `<li>${escapeHTML(affix)}</li>`).join('') : '<li class="affix-none">副次効果なし</li>'}</ul></div></section>
+        <section id="inspect-panel-enhancement" class="inspect-enhancement-panel" role="tabpanel" tabindex="0" aria-labelledby="inspect-tab-enhancement" ${inspectTab === 'enhancement' ? '' : 'hidden'}><div class="enhancement-summary"><b>強化 +${enhancementLevel(item)} / ${ENHANCEMENT_MAX}</b><span>基本性能 +${Math.round((enhancementMultiplier(item) - 1) * 100)}%</span></div>${matchedEnhancementMarkup(item)}${enhancementMarkup(item)}${enhancementLevel(item) >= ENHANCEMENT_MAX ? '<p class="enhancement-note">最大強化に到達しています。</p>' : !equipped ? '<p class="enhancement-note">装備すると強化できます。拾得Lv・品質・副次効果は維持します。</p>' : ''}${refundMarkup}${referenceMarkup}</section>
+        <section id="inspect-panel-synergies" class="inspect-synergy-panel" role="tabpanel" tabindex="0" aria-labelledby="inspect-tab-synergies" ${inspectTab === 'synergies' ? '' : 'hidden'}><h4 class="affix-heading">現在の装備構成の相性</h4><ul class="synergy-list">${synergyText}</ul><button class="synergy-details" data-action="synergy-details">相性のヒントを見る</button></section>
+      </div>
+      ${inspectTab === 'enhancement' ? enhancementActionMarkup(item) : ''}
+      <div class="inspect-actions"><button class="equip-weapon" data-action="equip-weapon" data-id="${escapeHTML(item.id)}" ${equipped ? 'disabled' : ''}><span class="action-full">${equipped ? '装備中' : 'この装備を使う'}</span><span class="action-compact">${equipped ? '装備中' : '装備'}</span></button><button class="lock-weapon ${item.locked ? 'locked' : ''}" data-action="lock-weapon" data-id="${escapeHTML(item.id)}" aria-pressed="${item.locked}" ${item.starter ? 'disabled' : ''}>${icon('lock')}<span class="action-full">${item.locked ? '保護中' : '保護する'}</span><span class="action-compact">${item.locked ? '保護中' : '保護'}</span></button><button class="sell-weapon" data-action="sell-weapon" data-id="${escapeHTML(item.id)}" title="${sellProtection}" aria-label="${sellProtection}" ${protectedItem(item) ? 'disabled' : ''}><span class="action-full">${sellProtection}</span><span class="action-compact">${compactSell}</span></button></div>`;
     query<HTMLButtonElement>('.synergy-details').textContent = showAllSynergies ? '現在の組み合わせに戻る' : '相性のヒントを見る';
     const eligible = eligibleItems();
     const bulkButton = query<HTMLButtonElement>('[data-action="review-bulk"]');
@@ -526,7 +549,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     saleReview.hidden = !saleItem;
     dialog.classList.toggle('referenced-sale-active', !!saleItem);
     if (saleItem) saleReview.innerHTML = `<section><span class="microtype">REFERENCED EQUIPMENT</span><h3>「${escapeHTML(saleItem.name)}」を売却します</h3><p>次の保存構成は欠品状態になり、呼び出せなくなります。</p><ul>${sim.getLoadoutReferences(saleItem.id).map(name => `<li>${escapeHTML(name)}</li>`).join('')}</ul><strong>＋${fee(sellValue(saleItem))} CR</strong><div><button data-action="cancel-referenced-sale">装備を残す</button><button class="confirm-referenced-sale" data-action="confirm-referenced-sale" data-id="${escapeHTML(saleItem.id)}" ${protectedItem(saleItem) ? 'disabled' : ''}>欠品になることを確認して売却</button></div></section>`;
-    query<HTMLElement>('.inspect-scroll').scrollTop = inspectScrollTop;
+    query<HTMLElement>('.inspect-scroll').scrollTop = inspectScroll[inspectTab];
     if (list.getClientRects().length) list.scrollTop = inventoryScrollTop;
     query('[data-inventory="summary"]').textContent = `武器 ${sim.state.inventory.length}/${INVENTORY_CAPACITY} · パーツ ${sim.state.parts.length}/${PART_CAPACITY} · 回収 ${sim.state.lootStats.found} · 売却 ${sim.state.lootStats.sold} 件 / ${format(sim.state.lootStats.soldCredits)} CR`;
     if (focused?.action) {
@@ -839,12 +862,13 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
       query<HTMLInputElement>('[data-inventory-control="search"]').value = '';
     }
     if (action === 'synergy-details') showAllSynergies = !showAllSynergies;
+    if (action === 'inspect-tab' && EQUIPMENT_DETAIL_TABS.some(tab => tab.id === id)) inspectTab = id as EquipmentDetailTab;
     if (action === 'close-dialog') closeDialog();
     if (action === 'autopilot') { sim.toggleAutopilot(); toast(sim.state.autopilot ? '自動操縦を開始しました' : '手動操縦に切り替えました'); }
     if (action === 'overdrive') { if (sim.activateOverdrive() !== false) toast('オーバードライブ発動！', 'power'); }
     if (action === 'upgrade' && sim.buyUpgrade(id as UpgradeId) !== false) toast(`${upgrades.find(item => item.id === id)?.name}を強化しました`);
     if (action === 'enhance-equipment' && sim.enhanceEquipment(id!)) toast(`${ownedItem(id!)?.name}を +${enhancementLevel(ownedItem(id!)!)} に強化しました`, 'power');
-    if (action === 'inspect-weapon') { selectedItemId = inventoryFocusId = id!; bulkReview = false; inventoryExpanded = true; }
+    if (action === 'inspect-weapon') { selectedItemId = inventoryFocusId = id!; inspectTab = 'overview'; bulkReview = false; inventoryExpanded = true; }
     if (action === 'inventory-view') inventoryExpanded = !inventoryExpanded;
     if (action === 'inventory-prev') inventoryPage = Math.max(0, inventoryPage - 1);
     if (action === 'inventory-next') inventoryPage += 1;
@@ -869,6 +893,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     if (action === 'prestige' && sim.getPrestigeReward() > 0) openDialog('prestige');
     if (action === 'confirm-prestige') { closeDialog(); if (sim.prestige() !== false) toast('再出撃しました。装備強化とスキルで、さらに先へ。', 'power'); }
     render();
+    if (action === 'inspect-tab') query<HTMLButtonElement>(`[data-action="inspect-tab"][data-id="${inspectTab}"]`).focus({ preventScroll: true });
     if (action === 'clear-inventory-search' || action === 'reset-inventory-filters') query<HTMLInputElement>('[data-inventory-control="search"]').focus({ preventScroll: true });
     if (action === 'inspect-weapon' && canFocusButton(query<HTMLButtonElement>('.inventory-pane-switch'))) query<HTMLButtonElement>('.inventory-pane-switch').focus({ preventScroll: true });
     if (action === 'inventory-view' && !inventoryExpanded) {
@@ -889,7 +914,7 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
       const list = query<HTMLElement>('.synergy-list');
       const target = (showAllSynergies ? list.querySelector<HTMLElement>('li:not(.active)') : null) ?? list.previousElementSibling as HTMLElement;
       readingArea.scrollTop += target.getBoundingClientRect().top - readingArea.getBoundingClientRect().top - 6;
-      inspectScrollTop = readingArea.scrollTop;
+      inspectScroll.synergies = readingArea.scrollTop;
     }
     if (action === 'claim-mission' && missionReceipt?.missionId === id) {
       const receipt = dialog.querySelector<HTMLElement>('.mission-receipt');
@@ -983,6 +1008,14 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     }
     if (target.getAttribute('role') === 'tab' && ['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) {
       event.preventDefault();
+      if (target.dataset.action === 'inspect-tab') {
+        const current = EQUIPMENT_DETAIL_TABS.findIndex(tab => tab.id === inspectTab);
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? EQUIPMENT_DETAIL_TABS.length - 1 : (current + (event.key === 'ArrowRight' ? 1 : EQUIPMENT_DETAIL_TABS.length - 1)) % EQUIPMENT_DETAIL_TABS.length;
+        inspectTab = EQUIPMENT_DETAIL_TABS[next].id;
+        render();
+        query<HTMLButtonElement>(`[data-action="inspect-tab"][data-id="${inspectTab}"]`).focus({ preventScroll: true });
+        return;
+      }
       if (target.dataset.action === 'records-tab') {
         const tabs = recordTabs.map(tab => tab.id);
         const current = tabs.indexOf(recordsTab);
