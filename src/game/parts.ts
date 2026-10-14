@@ -1,5 +1,5 @@
 import type { PartAffix, PartAffixId, PartItem, PartModel, PartSlot, WeaponRarity } from './types';
-import { RARITIES, rarityRank } from './loot';
+import { RARITIES, rarityRank, formatAffixNumber } from './loot';
 import { enhancementLevel, getEnhancementRefund } from './enhancement';
 
 export const PART_CAPACITY = 64;
@@ -32,10 +32,10 @@ export const clonePart = (item: PartItem): PartItem => ({ ...item, affixes: item
 export const partAffixValue = (item: PartItem, id: PartAffixId): number => item.affixes.find(affix => affix.id === id)?.value ?? 0;
 export function getPartAffixText(affix: PartAffix): string {
   const label = PART_AFFIXES[affix.id].label;
-  if (affix.id === 'regen') return `${label} +${affix.value.toFixed(1)} HP/秒`;
-  if (affix.id === 'leech') return `与ダメージの${Math.round(affix.value * 100)}%を回復（共通上限: シールド3%/秒）`;
-  if (affix.id === 'cooldown') return `${label} −${Math.round(affix.value * 100)}%`;
-  return `${label} +${Math.round(affix.value * 100)}%`;
+  if (affix.id === 'regen') return `${label} +${formatAffixNumber(affix.value)} HP/秒`;
+  if (affix.id === 'leech') return `与ダメージの${formatAffixNumber(affix.value * 100)}%を回復（共通上限: シールド3%/秒）`;
+  if (affix.id === 'cooldown') return `${label} −${formatAffixNumber(affix.value * 100)}%`;
+  return `${label} +${formatAffixNumber(affix.value * 100)}%`;
 }
 export function getPartSellValue(item: PartItem): number {
   return Math.floor((18 + item.level * 7) * (1 + rarityRank(item.rarity) * 1.4) * item.power * (item.slot === 'drone' ? 1 + (item.units - 1) * 0.15 : 1)) + getEnhancementRefund(item);

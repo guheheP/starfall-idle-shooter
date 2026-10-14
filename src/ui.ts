@@ -8,6 +8,7 @@ import { SECTORS, getSector, getOpeningDropMultiplier } from './game/sectors';
 import type { LoadoutSlot } from './game/loadouts';
 import type { ModuleId, UpgradeId, WeaponItem, WeaponRarity, PartItem, PartSlot, SkillId } from './game/types';
 import { gearArt, gearArtModel } from './ui/gear-art';
+import { compareEquipmentEffects, type EquipmentAffixComparisonRow } from './ui/equipment-comparison';
 import { renderMissionBoard } from './ui/mission-board';
 import { getMissionRewardLevel, type MissionId, type MissionSummary } from './game/missions';
 import { OPERATION_NODES, type OperationId } from './game/operations';
@@ -491,13 +492,23 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     }
     detail.dataset.itemId = item.id;
     const rarity = rarityInfo(item.rarity);
-    const equipped = item.id === equippedItem(inventoryCategory).id;
+    const currentItem = equippedItem(inventoryCategory);
+    const equipped = item.id === currentItem.id;
+    detail.dataset.comparing = String(!equipped);
+    dialog.classList.toggle('inventory-candidate-view', !equipped);
     const references = sim.getLoadoutReferences(item.id);
     const referenceMarkup = references.length ? `<div class="loadout-references">${icon('inventory')}<span>保存構成 ${references.length}件：${references.map(escapeHTML).join(' / ')}<small>一括整理・満杯時売却から保護</small></span></div>` : '';
-    const delta = (value: number, baseline: number, unit = '%') => {
+    const delta = (value: number, baseline: number, unit = '') => {
       if (equipped) return '';
-      const ratio = baseline > 0 ? (value / baseline - 1) * 100 : value;
-      return `<small class="${ratio > .05 ? 'comparison-up' : ratio < -.05 ? 'comparison-down' : ''}">${equipped || Math.abs(ratio) < .05 ? '±0' + (baseline > 0 ? '%' : unit) : `${ratio > 0 ? '+' : ''}${precision(ratio)}${baseline > 0 ? '%' : unit}`}</small>`;
+      const difference = value - baseline;
+      if (Math.abs(difference) < .00005) return '<small class="metric-delta">同じ</small>';
+      const amount = Math.abs(difference).toLocaleString('ja-JP', { maximumFractionDigits: Math.abs(difference) < .1 ? 3 : 1 });
+      return `<small class="metric-delta ${difference > 0 ? 'comparison-up' : 'comparison-down'}">${difference > 0 ? '↑ +' : '↓ −'}${amount}${unit === '%' ? 'pt' : escapeHTML(unit)}</small>`;
+    };
+    const metric = (value: number, baseline: number, unit = '', compact = false) => {
+      const valueText = compact ? format(value) : precision(value);
+      const baselineText = compact ? format(baseline) : precision(baseline);
+      return equipped ? `<strong>${valueText}${unit ? `<em>${escapeHTML(unit)}</em>` : ''}</strong>` : `<div class="stat-change"><span class="stat-before"><span class="sr-only">装備中 </span>${baselineText}</span><span aria-hidden="true">→</span><strong class="stat-after"><span class="sr-only">候補 </span>${valueText}${unit ? `<em>${escapeHTML(unit)}</em>` : ''}</strong></div>`;
     };
     let performance = '';
     let fixedEffects = '';
@@ -506,14 +517,13 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
       const preview = sim.getWeaponPreview(item);
       const current = sim.getWeaponPreview(sim.getEquippedWeapon());
       const mastery = sim.getMastery(item.type);
-      const baseline = (value: number) => equipped ? '' : `<small class="comparison-baseline">現 ${precision(value)}</small>`;
-      performance = `<div class="comparison-caption">${equipped ? '装備性能' : '装備中と比較'} <span>主弾・会心の目安</span></div><div class="weapon-comparison"><div><span>威力 / 発</span><strong>${precision(preview.damage)}</strong>${baseline(current.damage)}${delta(preview.damage, current.damage)}</div><div><span>射撃 / 秒</span><strong>${precision(preview.fireRate)}</strong>${baseline(current.fireRate)}${delta(preview.fireRate, current.fireRate)}</div><div><span>期待 DPS</span><strong>${format(preview.dps)}</strong>${baseline(current.dps)}${delta(preview.dps, current.dps)}</div></div><div class="critical-readout"><span>会心 ${precision(preview.critChance * 100)}% / ×${precision(preview.critMultiplier)}</span><span>熟練 ${mastery.level} / 威力 +${Math.round(mastery.bonus * 100)}%</span></div>`;
+      performance = `<div class="comparison-caption">${equipped ? '装備性能' : '装備中 → 候補'} <span>主弾・会心の目安</span></div><div class="weapon-comparison"><div><span>威力 / 発</span>${metric(preview.damage, current.damage)}${delta(preview.damage, current.damage)}</div><div><span>射撃 / 秒</span>${metric(preview.fireRate, current.fireRate)}${delta(preview.fireRate, current.fireRate, '/秒')}</div><div><span>期待 DPS</span>${metric(preview.dps, current.dps, '', true)}${delta(preview.dps, current.dps)}</div></div><div class="critical-readout"><span>会心 ${equipped ? '' : `${precision(current.critChance * 100)}% → `}${precision(preview.critChance * 100)}% / ×${precision(preview.critMultiplier)}</span><span>熟練 ${equipped ? '' : `${sim.getMastery(sim.getEquippedWeapon().type).level} → `}${mastery.level} / 威力 +${Math.round(mastery.bonus * 100)}%</span></div>`;
       affixes = item.affixes.map(getAffixText);
     } else {
       const preview = sim.getPartPreview(item);
       const current = sim.getPartPreview(sim.getEquippedPart(item.slot));
       const visibleStats = preview.stats.filter(stat => stat.value !== 0 || (current.stats.find(value => value.label === stat.label)?.value ?? 0) !== 0);
-      performance = `<div class="comparison-caption">${equipped ? '固有性能' : `装備中の${categoryLabel(item.slot)}と比較`}</div><div class="weapon-comparison part-comparison" data-stat-count="${visibleStats.length}">${visibleStats.map(stat => { const currentStat = current.stats.find(value => value.label === stat.label); const baseline = currentStat?.value ?? 0; return `<div><span>${escapeHTML(stat.label)}</span><strong>${precision(stat.value)}<em>${escapeHTML(stat.unit)}</em></strong>${equipped ? '' : `<small class="comparison-baseline">${currentStat ? `現 ${precision(baseline)} ${escapeHTML(stat.unit)}` : '現装備 —'}</small>${currentStat ? delta(stat.value, baseline, stat.unit) : '<small class="comparison-new">新規効果</small>'}`}</div>`; }).join('')}</div>`;
+      performance = `<div class="comparison-caption">固有性能${equipped ? '' : '：装備中 → 候補'}</div><div class="weapon-comparison part-comparison" data-stat-count="${visibleStats.length}">${visibleStats.map(stat => { const currentStat = current.stats.find(value => value.label === stat.label); const baseline = currentStat?.value ?? 0; return `<div><span>${escapeHTML(stat.label)}</span>${metric(stat.value, baseline, stat.unit)}${delta(stat.value, baseline, stat.unit)}</div>`; }).join('')}</div>`;
       fixedEffects = `<div class="part-fixed-effects">${preview.effects.map(effect => `<p class="part-fixed-effect">${escapeHTML(effect)}</p>`).join('')}</div>`;
       affixes = item.affixes.map(getPartAffixText);
     }
@@ -522,14 +532,28 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     const sellProtection = equipped ? '装備中は売却不可' : item.starter ? '初期装備は売却不可' : item.locked ? '保護中は売却不可' : `${format(sellValue(item))} CR で売却`;
     const compactSell = equipped ? '装備中' : item.starter ? '初期装備' : item.locked ? '保護中' : `売却 ${format(sellValue(item))} CR`;
     const description = isWeapon(item) ? `<p class="weapon-description">${itemBase(item).description}</p>` : '';
+    const effects = equipped ? null : compareEquipmentEffects(item, currentItem);
+    const effectStatus = (row: EquipmentAffixComparisonRow) => row.effectiveStatus ?? row.status;
+    const effectMarkup = (row: EquipmentAffixComparisonRow) => {
+      const change = effectStatus(row);
+      const label = change === 'unchanged' && row.status !== 'unchanged' ? '維持' : { added: '追加', improved: '上昇', reduced: '低下', removed: '失う', unchanged: '同じ' }[change];
+      return `<li class="effect-delta effect-delta-${change}"><div class="effect-delta-main"><span class="effect-change">${label}</span><b class="effect-name">${escapeHTML(row.effectiveLabel ?? row.label)}</b><span class="effect-values"><span class="effect-before">${escapeHTML(row.effectiveBefore ?? row.before)}</span><span aria-hidden="true">→</span><strong class="effect-after">${escapeHTML(row.effectiveAfter ?? row.after)}</strong></span></div>${row.note ? `<small class="effect-note">${escapeHTML(row.note)}</small>` : ''}</li>`;
+    };
+    const changedEffects = effects?.rows.filter(row => effectStatus(row) !== 'unchanged' || row.status !== 'unchanged') ?? [];
+    const unchangedEffects = effects?.rows.filter(row => effectStatus(row) === 'unchanged' && row.status === 'unchanged') ?? [];
+    const gainedEffects = changedEffects.filter(row => ['added', 'improved'].includes(effectStatus(row))).length;
+    const lostEffects = changedEffects.filter(row => ['reduced', 'removed'].includes(effectStatus(row))).length;
+    const modelMarkup = effects?.model.changed ? `<div class="model-comparison"><p class="model-gain">候補の固有効果：${escapeHTML(effects.model.after.description)}</p><p class="model-loss">現在の固有効果：${escapeHTML(effects.model.before.description)}</p></div>` : description + fixedEffects;
+    const affixMarkup = effects ? `<h4 class="effect-comparison-caption">効果の差分 <span class="effect-change-counts"><span class="effect-gain-count">追加・上昇 ${gainedEffects}</span><span class="effect-loss-count">低下・消失 ${lostEffects}</span></span></h4><ul class="affix-comparison">${changedEffects.map(effectMarkup).join('')}</ul>${changedEffects.length ? '' : '<p class="effect-comparison-empty">副次効果の変化なし</p>'}${unchangedEffects.length ? `<details class="unchanged-effects"><summary>同じ効果 ${unchangedEffects.length}件</summary><ul class="affix-comparison">${unchangedEffects.map(effectMarkup).join('')}</ul></details>` : ''}${effects.rows.some(row => row.effectiveLabel) ? '<p class="effect-scope-note">固有を含む値は、他パーツの補正を除きます。</p>' : ''}` : `<h4 class="affix-heading">副次効果 <span>${affixes.length}件</span></h4><ul class="affix-list">${affixes.length ? affixes.map(affix => `<li>${escapeHTML(affix)}</li>`).join('') : '<li class="affix-none">副次効果なし</li>'}</ul>`;
     const refundMarkup = enhancementLevel(item) > 0 && !item.starter ? `<p class="part-fixed-effect">売却額には強化費の50%（${fee(getEnhancementRefund(item))} CR）を含みます。</p>` : '';
     detail.dataset.detailTab = inspectTab;
     const status = [equipped ? '装備中' : '', item.starter ? '初期装備' : item.locked ? '保護中' : ''].filter(Boolean).join(' / ');
     detail.innerHTML = `
       <div class="inspect-header" style="--rarity-color:${cssColor(rarity.color)}"><div class="inspect-art">${gearArt(item)}<span></span></div><div><h3 title="${escapeHTML(item.name)}">${escapeHTML(item.name)}</h3><small class="rarity-label"><span class="rarity-mark" title="${rarity.label}" role="img" aria-label="${rarity.label}"></span>${itemBase(item).name} · Lv.${item.level} · +${enhancementLevel(item)}${status ? `<span class="inspect-status">${status}</span>` : ''}</small></div></div>
+      ${equipped ? '' : `<div class="comparison-source">装備中：<b>${escapeHTML(currentItem.name)}</b> · Lv.${currentItem.level} · +${enhancementLevel(currentItem)}</div>`}
       <div class="inspect-tabs" role="tablist" aria-label="装備の詳細">${EQUIPMENT_DETAIL_TABS.map(tab => `<button id="inspect-tab-${tab.id}" data-action="inspect-tab" data-id="${tab.id}" role="tab" aria-controls="inspect-panel-${tab.id}" aria-selected="${inspectTab === tab.id}" tabindex="${inspectTab === tab.id ? 0 : -1}">${tab.label}</button>`).join('')}</div>
       <div class="inspect-scroll" data-detail-pane="${inspectTab}">
-        <section id="inspect-panel-overview" class="inspect-overview" role="tabpanel" tabindex="0" aria-labelledby="inspect-tab-overview" ${inspectTab === 'overview' ? '' : 'hidden'}><div class="inspect-performance">${performance}</div><div class="inspect-effects">${description}${fixedEffects}<h4 class="affix-heading">副次効果 <span>${affixes.length}件</span></h4><ul class="affix-list">${affixes.length ? affixes.map(affix => `<li>${escapeHTML(affix)}</li>`).join('') : '<li class="affix-none">副次効果なし</li>'}</ul></div></section>
+        <section id="inspect-panel-overview" class="inspect-overview" role="tabpanel" tabindex="0" aria-labelledby="inspect-tab-overview" ${inspectTab === 'overview' ? '' : 'hidden'}><div class="inspect-performance">${performance}${equipped ? '' : modelMarkup}</div><div class="inspect-effects">${equipped ? modelMarkup : ''}${affixMarkup}</div></section>
         <section id="inspect-panel-enhancement" class="inspect-enhancement-panel" role="tabpanel" tabindex="0" aria-labelledby="inspect-tab-enhancement" ${inspectTab === 'enhancement' ? '' : 'hidden'}><div class="enhancement-summary"><b>強化 +${enhancementLevel(item)} / ${ENHANCEMENT_MAX}</b><span>基本性能 +${Math.round((enhancementMultiplier(item) - 1) * 100)}%</span></div>${matchedEnhancementMarkup(item)}${enhancementMarkup(item)}${enhancementLevel(item) >= ENHANCEMENT_MAX ? '<p class="enhancement-note">最大強化に到達しています。</p>' : !equipped ? '<p class="enhancement-note">装備すると強化できます。拾得Lv・品質・副次効果は維持します。</p>' : ''}${refundMarkup}${referenceMarkup}</section>
         <section id="inspect-panel-synergies" class="inspect-synergy-panel" role="tabpanel" tabindex="0" aria-labelledby="inspect-tab-synergies" ${inspectTab === 'synergies' ? '' : 'hidden'}><h4 class="affix-heading">現在の装備構成の相性</h4><ul class="synergy-list">${synergyText}</ul><button class="synergy-details" data-action="synergy-details">相性のヒントを見る</button></section>
       </div>

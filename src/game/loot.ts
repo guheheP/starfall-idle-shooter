@@ -31,16 +31,18 @@ const safeRandom = (rng: () => number): number => finite(rng(), 0.5, 0, 0.999999
 export const cloneWeapon = (item: WeaponItem): WeaponItem => ({ ...item, affixes: item.affixes.map(affix => ({ ...affix })) });
 export const rarityRank = (id: WeaponRarity): number => RARITIES.find(rarity => rarity.id === id)?.rank ?? 0;
 export const getWeaponColor = (item: WeaponItem): number => WEAPON_BASES[item.type].color;
+export const formatAffixNumber = (value: number, precision = 3): string =>
+  value.toFixed(precision).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '');
 export function getAffixText(affix: WeaponAffix): string {
   const definition = AFFIXES[affix.id];
   if (affix.id === 'pierce') return `貫通 +${affix.value}体`;
   if (affix.id === 'chain') return `電撃連鎖 ${affix.value}体（威力72%ずつ減衰）`;
-  if (affix.id === 'homing') return `追尾（旋回 ${Math.round(affix.value * 180 / Math.PI)}°/秒）`;
-  if (affix.id === 'explosive') return `爆風 ${Math.round(affix.value)}px（威力55%）`;
-  if (affix.id === 'frost') return `敵を${Math.round(affix.value * 100)}%減速（2秒）`;
-  if (affix.id === 'leech') return `与ダメージの${Math.round(affix.value * 100)}%を回復（共通上限: シールド3%/秒）`;
-  if (affix.id === 'critical') return `会心率 +${Math.round(affix.value * 100)}%（基礎倍率2倍）`;
-  return `${definition.label} +${Math.round(affix.value * 100)}%`;
+  if (affix.id === 'homing') return `追尾（旋回 ${formatAffixNumber(affix.value * 180 / Math.PI, 1)}°/秒）`;
+  if (affix.id === 'explosive') return `爆風 ${formatAffixNumber(affix.value)}px（威力55%）`;
+  if (affix.id === 'frost') return `敵を${formatAffixNumber(affix.value * 100)}%減速（2秒）`;
+  if (affix.id === 'leech') return `与ダメージの${formatAffixNumber(affix.value * 100)}%を回復（共通上限: シールド3%/秒）`;
+  if (affix.id === 'critical') return `会心率 +${formatAffixNumber(affix.value * 100)}%（基礎倍率2倍）`;
+  return `${definition.label} +${formatAffixNumber(affix.value * 100)}%`;
 }
 export function getSellValue(item: WeaponItem): number {
   return Math.floor((12 + item.level * 6) * (1 + rarityRank(item.rarity) * 1.4) * item.power) + getEnhancementRefund(item);

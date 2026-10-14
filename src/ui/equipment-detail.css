@@ -226,3 +226,151 @@
   .inventory-dialog .inventory-inspect[data-detail-tab] > .inspect-actions { padding-top: 4px; }
   .inventory-dialog .inventory-inspect[data-detail-tab] .inspect-upgrade-action .enhance-equipment { min-width: 188px; flex-direction: row; gap: 8px; }
 }
+
+/* A candidate keeps its full descriptions while making gains and losses readable together. */
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .comparison-source {
+  margin: 0 0 5px;
+  color: #aac0d0;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .comparison-source :is(b, strong) { color: #cce0eb; font-weight: 500; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .weapon-comparison { gap: 3px; padding: 5px 3px; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .weapon-comparison > div { min-width: 0; padding: 0 2px; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .weapon-comparison .stat-change {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px 3px;
+  margin: 3px 0;
+  color: #7fa0b5;
+  font-size: 12px;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+}
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .weapon-comparison .stat-before { display: inline; color: #9bb4c7; font-size: 12px; line-height: 1.25; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .weapon-comparison .stat-after { display: inline; margin: 0; color: #e6f4fb; font-size: 18px; line-height: 1.2; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .weapon-comparison .stat-after em { font-size: 12px; font-style: normal; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .weapon-comparison .metric-delta { min-width: 0; font-size: 12px; line-height: 1.25; font-variant-numeric: tabular-nums; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .critical-readout { gap: 2px 8px; margin-top: 4px; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .model-comparison { display: grid; gap: 3px; margin: 0 0 6px; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .inspect-performance > .model-comparison { margin: 5px 0 0; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .model-comparison > :is(.model-gain, .model-loss) {
+  min-width: 0;
+  margin: 0;
+  padding: 4px 6px;
+  border-left: 2px solid #6a9db8;
+  border-radius: 0 3px 3px 0;
+  background: #14304877;
+  color: #c9dfea;
+  font-size: 12px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .model-comparison > .model-loss { border-left-color: #536d81; background: #15253488; color: #b3c5d3; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .effect-comparison-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 6px;
+  margin: 5px 0 4px;
+  padding: 0;
+  color: #cfdee9;
+  font-size: 12px;
+  line-height: 1.35;
+}
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .effect-change-counts { display: inline-flex; flex-wrap: wrap; gap: 3px 7px; color: #9db3c5; font-size: 12px; font-weight: 400; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .effect-change-counts :is(.comparison-up, .effect-gain-count) { color: #a8e6c2; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .effect-change-counts :is(.comparison-down, .effect-loss-count) { color: #f3b6a8; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .affix-comparison {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .effect-delta {
+  min-width: 0;
+  margin: 0;
+  padding: 4px 6px;
+  border: 1px solid #294252;
+  border-left: 2px solid #597589;
+  border-radius: 3px;
+  background: #10202e;
+  color: #c3d8e5;
+  font-size: 12px;
+  line-height: 1.3;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .effect-delta::before { content: none; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .effect-delta-main { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, auto); align-items: baseline; gap: 3px 6px; min-width: 0; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .effect-change { min-width: 24px; color: #9ab4c5; font-size: 12px; font-weight: 500; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .effect-name { min-width: 0; color: #d8e6ee; font-size: 12px; font-weight: 500; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .effect-values { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-end; gap: 2px 3px; min-width: 0; max-width: 148px; color: #819fb3; font-size: 12px; font-variant-numeric: tabular-nums; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .effect-before { color: #9bb3c6; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .effect-after { color: #e0edf4; font-size: 12px; font-weight: 600; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .effect-note { display: block; margin: 2px 0 0 30px; color: #9eb5c6; font-size: 12px; line-height: 1.3; white-space: normal; overflow-wrap: anywhere; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] :is(.effect-delta-added, .effect-delta-improved) { border-left-color: #5dba89; background: #142c27; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] :is(.effect-delta-added, .effect-delta-improved) :is(.effect-change, .effect-after) { color: #abe6c5; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] :is(.effect-delta-reduced, .effect-delta-removed) { border-left-color: #c88678; background: #30252b; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] :is(.effect-delta-reduced, .effect-delta-removed) :is(.effect-change, .effect-after) { color: #f0b7aa; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] :is(.effect-scope-note, .effect-comparison-empty) { margin: 5px 0 0; color: #9eb5c6; font-size: 12px; line-height: 1.35; white-space: normal; overflow-wrap: anywhere; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .unchanged-effects { margin-top: 4px; min-width: 0; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .unchanged-effects > summary { display: flex; align-items: center; gap: 6px; min-height: 44px; padding: 4px 6px; border: 1px solid #294252; border-radius: 3px; background: #10202e; color: #b3c8d7; font-size: 12px; line-height: 1.35; cursor: pointer; touch-action: manipulation; list-style: none; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .unchanged-effects > summary::-webkit-details-marker { display: none; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .unchanged-effects > summary::before { content: '＋'; flex: 0 0 auto; color: #8aa8bc; font-size: 14px; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .unchanged-effects[open] > summary::before { content: '−'; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .unchanged-effects > summary:hover { border-color: #58778b; background: #192d3c; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .unchanged-effects > summary:focus-visible { outline: 2px solid #a3dbe9; outline-offset: 2px; }
+.inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .unchanged-effects[open] > .affix-comparison { margin-top: 3px; }
+
+@media (min-width: 361px) and (max-width: 760px) and (min-height: 501px) {
+  .inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .part-comparison[data-stat-count='4'] { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3px; }
+  .inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .part-comparison[data-stat-count='4'] > div + div { border-left: 1px solid #294458; }
+}
+
+@media (min-width: 1001px), (max-height: 500px) and (min-width: 600px) and (max-width: 1000px) {
+  .inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .inspect-overview { grid-template-columns: minmax(0, .85fr) minmax(0, 1.3fr); gap: 8px; }
+  .inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .weapon-comparison { grid-template-columns: minmax(0, 1fr); gap: 0; padding: 4px 6px; }
+  .inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .weapon-comparison > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1px 5px; align-items: center; padding: 3px 0; text-align: left; }
+  .inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .weapon-comparison > div + div { border-left: 0; border-top: 1px solid #294458; }
+  .inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .weapon-comparison .stat-change { justify-content: flex-end; margin: 0; }
+  .inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .weapon-comparison .metric-delta { grid-column: 2; justify-self: end; }
+  .inventory-dialog .inventory-inspect[data-detail-tab][data-comparing='true'] .effect-values { max-width: 136px; }
+}
+
+@media (min-width: 1001px) {
+  /* Collection controls occupy the list column instead of shortening the comparison. */
+  .inventory-dialog.inventory-candidate-view:not(.inventory-settings-open):not(.bulk-review-active):not(.referenced-sale-active) {
+    width: min(1120px, calc(100vw - 24px));
+    height: min(780px, calc(100dvh - 16px));
+    padding: 14px;
+  }
+  .inventory-dialog.inventory-candidate-view:not(.inventory-settings-open):not(.bulk-review-active):not(.referenced-sale-active) > h2 { min-height: 28px; margin: 3px 0 8px; font-size: 20px; line-height: 1.35; }
+  .inventory-dialog.inventory-candidate-view:not(.inventory-settings-open):not(.bulk-review-active):not(.referenced-sale-active) .dialog-body {
+    display: grid;
+    grid-template-columns: minmax(0, .72fr) minmax(0, 1.3fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+    gap: 7px 12px;
+  }
+  .inventory-dialog.inventory-candidate-view:not(.inventory-settings-open):not(.bulk-review-active):not(.referenced-sale-active) .inventory-category-tabs { grid-column: 1; grid-row: 1; gap: 4px; }
+  .inventory-dialog.inventory-candidate-view:not(.inventory-settings-open):not(.bulk-review-active):not(.referenced-sale-active) .inventory-category-tabs button { gap: 4px; }
+  .inventory-dialog.inventory-candidate-view:not(.inventory-settings-open):not(.bulk-review-active):not(.referenced-sale-active) .inventory-commandbar { grid-column: 1; grid-row: 2; grid-template-columns: minmax(0, 1fr) 104px; gap: 6px; }
+  .inventory-dialog.inventory-candidate-view:not(.inventory-settings-open):not(.bulk-review-active):not(.referenced-sale-active) .inventory-tools-row { grid-column: 1; grid-row: 3; gap: 6px; }
+  .inventory-dialog.inventory-candidate-view:not(.inventory-settings-open):not(.bulk-review-active):not(.referenced-sale-active) .inventory-tools > summary { padding-inline: 7px; }
+  .inventory-dialog.inventory-candidate-view:not(.inventory-settings-open):not(.bulk-review-active):not(.referenced-sale-active) .inventory-workspace { display: contents; }
+  .inventory-dialog.inventory-candidate-view:not(.inventory-settings-open):not(.bulk-review-active):not(.referenced-sale-active) .inventory-roster { display: flex; grid-column: 1; grid-row: 4; min-height: 0; }
+  .inventory-dialog.inventory-candidate-view:not(.inventory-settings-open):not(.bulk-review-active):not(.referenced-sale-active) .inventory-summary { grid-column: 1; grid-row: 5; min-width: 0; }
+  .inventory-dialog.inventory-candidate-view:not(.inventory-settings-open):not(.bulk-review-active):not(.referenced-sale-active) .inventory-inspect[data-detail-tab] { grid-column: 2; grid-row: 1 / -1; display: flex; min-height: 0; }
+  .inventory-dialog.inventory-candidate-view:not(.inventory-settings-open):not(.bulk-review-active):not(.referenced-sale-active):has(.inventory-active-filters:not([hidden])) .dialog-body { grid-template-rows: auto auto auto auto minmax(0, 1fr) auto; }
+  .inventory-dialog.inventory-candidate-view:not(.inventory-settings-open):not(.bulk-review-active):not(.referenced-sale-active) .inventory-active-filters { grid-column: 1; grid-row: 4; }
+  .inventory-dialog.inventory-candidate-view:not(.inventory-settings-open):not(.bulk-review-active):not(.referenced-sale-active):has(.inventory-active-filters:not([hidden])) .inventory-roster { grid-row: 5; }
+  .inventory-dialog.inventory-candidate-view:not(.inventory-settings-open):not(.bulk-review-active):not(.referenced-sale-active):has(.inventory-active-filters:not([hidden])) .inventory-summary { grid-row: 6; }
+}
