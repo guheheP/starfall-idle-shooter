@@ -2,8 +2,7 @@ import type { PartItem, PartModel, WeaponId, WeaponItem } from '../game/types';
 
 type GearModel = WeaponId | PartModel;
 
-// These are machined silhouettes, not rarity badges. The active model's shape
-// and energy colour are shared with the combat art; its frame carries rarity.
+// Model colour belongs to the equipment. Rarity belongs to its inventory frame.
 const ENERGY: Record<GearModel, string> = {
   pulse: '#83e6f3', spread: '#edc17c', lance: '#c5a5ff', missile: '#f6a06b', arc: '#83b5ff', orbit: '#e8d796',
   focus: '#ead494', velocity: '#80d7e9', cascade: '#bc9ce8',
@@ -29,12 +28,72 @@ const SHAPES: Record<GearModel, string> = {
   striker: '<path class="gear-metal" d="m42 19 18-8 18 8 11 20v23L75 75H45L31 62V39z"/><path class="gear-plate" d="m48 21 12-5 12 5 9 20v20l-11 9H50l-11-9V41z"/><path class="gear-dark" d="M51 29h18v32H51z"/><path class="gear-metal" d="M25 24h15v38H25zm55 0h15v38H80z"/><path class="gear-energy" d="M28 12h9v24h-9zm55 0h9v24h-9zM55 39h10v15H55z"/><path class="gear-light" d="M31 9h3v19h-3zm55 0h3v19h-3z"/><path class="gear-detail" d="M29 44h7m-7 8h7m48-8h7m-7 8h7M50 65h20"/>',
 };
 
-const MARKUP = Object.fromEntries(Object.entries(SHAPES).map(([model, shape]) => [model,
-  `<svg class="gear-art-svg" data-gear-model="${model}" viewBox="0 0 120 88" fill="none" style="color:${ENERGY[model as GearModel]}" aria-hidden="true"><ellipse cx="60" cy="74" rx="32" ry="4" fill="#020a13" opacity=".7"/><g stroke="#1a3042" stroke-width="1.1" stroke-linejoin="round">${shape}</g></svg>`,
-])) as Record<GearModel, string>;
+// Broad top-facing edges and inset housings give the pieces physical depth.
+// Their main silhouettes stay clean enough to recognise in a small icon grid.
+const FINISH: Record<GearModel, string> = {
+  pulse: '<path class="gear-metal" d="M35 40h11v8H35zm39 0h11v8H74zM51 65h18v7H51z"/><path class="gear-rim" d="M35 32h11m28 0h11M43 33l8-15h18l8 15M52 66h16"/>',
+  spread: '<path class="gear-metal" d="m25 46 9 4-3 7-9-4zm70 0-9 4 3 7 9-4z"/><path class="gear-rim" d="m23 52 14-25 14 7M69 34l14-7 14 25M49 24h22M45 52l15 8 15-8"/>',
+  lance: '<path class="gear-metal" d="M48 24h7v8h-7zm17 0h7v8h-7zM49 48h6v7h-6zm16 0h6v7h-6z"/><path class="gear-rim" d="m41 39 10-17m28 17L69 22M49 66l11 12 11-12"/>',
+  missile: '<path class="gear-metal" d="M35 44h13v8H35zm19 0h12v8H54zm18 0h13v8H72z"/><path class="gear-rim" d="M35 37h13m24 0h13M55 32h10m-35 18 13 7 17 10 17-10 13-7"/>',
+  arc: '<circle class="gear-metal" cx="60" cy="45" r="18"/><circle class="gear-energy" cx="60" cy="45" r="13"/><circle class="gear-dark" cx="60" cy="45" r="9"/><path class="gear-light" d="m62 31-10 17h8l-2 13 10-18h-8z"/><path class="gear-rim" d="M33 33h11m32 0h11M44 33a19 19 0 0 1 27-4M37 62l23 8 23-8"/>',
+  orbit: '<path class="gear-rim" d="M44 29a23 23 0 0 1 32 0M39 50a23 23 0 0 0 10 14m22 0a23 23 0 0 0 10-14"/><path class="gear-detail" d="M60 26v5m0 28v5M41 45h5m28 0h5"/>',
+  focus: '<path class="gear-metal" d="M49 37h22v6H49z"/><path class="gear-rim" d="m15 65 28-50 9 3m53 47L77 15l-9 3M49 38h22"/>',
+  velocity: '<path class="gear-rim" d="m11 61 42-38h14l42 38M46 53h28"/><path class="gear-metal" d="M51 30h18v7H51z"/>',
+  cascade: '<path class="gear-metal" d="M27 36h18v7H27zm48 0h18v7H75z"/><path class="gear-rim" d="M23 45h24m26 0h24M14 58l18-29h20m16 0h20l18 29"/>',
+  reactor: '<path class="gear-metal" d="M29 37h11v17H29zm51 0h11v17H80zM47 66h26v8H47z"/><path class="gear-rim" d="m32 35 10-15 18-9 18 9 10 15M48 67h24M46 28a21 21 0 0 1 28 0"/>',
+  siphon: '<path class="gear-metal" d="M44 19h32v8H44zm1 39h7v7h-7zm23 0h7v7h-7z"/><path class="gear-rim" d="M44 20h32M37 25l8-12 15-5 15 5 8 12M49 68h22"/>',
+  bastion: '<path class="gear-metal" d="M42 19h36v7H42z"/><path class="gear-rim" d="M43 20h34m-43 3 10-12h32l10 12M44 63l16 12 16-12"/>',
+  frost: '<path class="gear-rim" d="m37 24 23-13 23 13M35 46l10 17 15 9 15-9 10-17"/><path class="gear-metal" d="M22 33h10v6H22zm66 0h10v6H88z"/>',
+  mender: '<path class="gear-metal" d="M25 37h10v7H25zm60 0h10v7H85z"/><path class="gear-rim" d="m28 38 14-18 18-8 18 8 14 18M45 29a21 21 0 0 1 30 0M43 69h34"/>',
+  striker: '<path class="gear-metal" d="M25 38h15v7H25zm55 0h15v7H80z"/><path class="gear-rim" d="M25 25h15m40 0h15M43 20l17-8 17 8M50 66h20"/>',
+};
+
+let artSequence = 0;
 
 export function gearArt(item: WeaponItem | PartItem): string {
-  return MARKUP['type' in item ? item.type : item.model];
+  const model = gearArtModel(item);
+  const colour = ENERGY[model];
+  // One item can appear in the grid, loadout and detail view at the same time.
+  // Unique IDs keep each SVG's gradients local to that individual instance.
+  const id = `gear-${model}-${(++artSequence).toString(36)}`;
+  const paint: Record<string, string> = {
+    plate: `fill:url(#${id}-plate)`,
+    metal: `fill:url(#${id}-metal)`,
+    bevel: `fill:url(#${id}-bevel)`,
+    dark: `fill:url(#${id}-dark)`,
+    energy: `fill:url(#${id}-energy);stroke:${colour};stroke-width:.65`,
+    light: 'fill:#f0fcff;stroke:none',
+    rim: `fill:none;stroke:url(#${id}-rim);stroke-width:1.5`,
+    detail: 'fill:none;stroke:#c2d1da;stroke-width:1;opacity:.45',
+  };
+  // Inline fills deliberately override the original flat material CSS rules.
+  const shape = (SHAPES[model] + FINISH[model]).replace(/class="gear-([a-z]+)"/g,
+    (_, material: string) => `class="gear-${material}" style="${paint[material]}"`);
+
+  return `<svg class="gear-art-svg" data-gear-model="${model}" viewBox="0 0 120 88" fill="none" style="color:${colour}" aria-hidden="true">
+    <defs>
+      <linearGradient id="${id}-plate" x1="25" y1="12" x2="85" y2="78" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#a6b9c4"/><stop offset=".32" stop-color="#6e8798"/><stop offset=".53" stop-color="#415d74"/><stop offset="1" stop-color="#233b50"/>
+      </linearGradient>
+      <linearGradient id="${id}-metal" x1="34" y1="14" x2="72" y2="78" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#edf1ec"/><stop offset=".28" stop-color="#a9bbc3"/><stop offset=".5" stop-color="#698597"/><stop offset=".54" stop-color="#b5c6cd"/><stop offset="1" stop-color="#405b70"/>
+      </linearGradient>
+      <linearGradient id="${id}-bevel" x1="60" y1="30" x2="60" y2="78" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#516b80"/><stop offset="1" stop-color="#172c40"/>
+      </linearGradient>
+      <linearGradient id="${id}-dark" x1="60" y1="16" x2="60" y2="76" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#07121f"/><stop offset="1" stop-color="#1e3445"/>
+      </linearGradient>
+      <linearGradient id="${id}-energy" x1="60" y1="10" x2="60" y2="72" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#f2fbff"/><stop offset=".3" stop-color="${colour}"/><stop offset=".72" stop-color="${colour}"/><stop offset="1" stop-color="#315371"/>
+      </linearGradient>
+      <linearGradient id="${id}-rim" x1="35" y1="15" x2="78" y2="80" gradientUnits="userSpaceOnUse">
+        <stop stop-color="#f0f6f4"/><stop offset=".48" stop-color="#a8bdcc"/><stop offset="1" stop-color="#70899e" stop-opacity=".15"/>
+      </linearGradient>
+    </defs>
+    <ellipse cx="60" cy="77" rx="31" ry="3" fill="#020811" opacity=".6"/>
+    <g stroke="#0b1b2a" stroke-width="1.15" stroke-linejoin="round">${shape}</g>
+  </svg>`;
 }
 
 export function gearArtModel(item: WeaponItem | PartItem): GearModel {

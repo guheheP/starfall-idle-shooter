@@ -23,7 +23,7 @@ const icons: Record<string, string> = {
   crosshair: '<circle cx="12" cy="12" r="6"/><path d="M12 2v5m0 10v5M2 12h5m10 0h5"/>',
   rate: '<path d="m13 2-8 12h6l-1 8 9-13h-6z"/>',
   shield: '<path d="m12 2 8 3v6c0 5-4 8-8 11-4-3-8-6-8-11V5z"/><path d="m8 11 3 3 5-6"/>',
-  drone: '<path d="m12 7 5 5-5 5-5-5zM3 3h4v4H3zm14 0h4v4h-4zM3 17h4v4H3zm14 0h4v4h-4z"/>',
+  drone: '<path d="m12 8 4 4-4 4-4-4zM9 9 6 6m9 3 3-3M9 15l-3 3m9-3 3 3"/><circle cx="5" cy="5" r="3"/><circle cx="19" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><circle cx="12" cy="12" r="1"/>',
   pause: '<path d="M8 5v14M16 5v14"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9 8a3 3 0 0 1 6 0c0 2-3 2-3 5m0 3v1"/>',
   settings: '<path d="m9 3 1-1h4l1 1 1 3 3 1 2 2v4l-2 2-3 1-1 3-1 2h-4l-1-2-1-3-3-1-2-2V9l2-2 3-1z"/><circle cx="12" cy="11.5" r="3"/>',
@@ -40,10 +40,12 @@ const icons: Record<string, string> = {
   missile: '<path d="m12 2 4 6v9H8V8zM8 12l-4 5v4l4-2m8-7 4 5v4l-4-2M10 20v2m4-2v2"/><circle cx="12" cy="10" r="2"/>',
   arc: '<path d="m14 2-9 11h6l-1 9 9-13h-6zM4 3 2 7m18 10 2 4"/>',
   orbit: '<circle cx="12" cy="12" r="4"/><ellipse cx="12" cy="12" rx="10" ry="6" transform="rotate(-35 12 12)"/><path d="m10 4 3-2 3 3M6 17l-2 3 4 2"/>',
-  inventory: '<path d="M3 7h18v14H3zM8 7V3h8v4M3 12h18M9 11v3h6v-3"/>',
+  inventory: '<path d="m5 5 3-2h8l3 2 2 4v10l-2 2H5l-2-2V9zM3 10h18M8 3v4h8V3M9 10v4h6v-4M7 18h10"/>',
   lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V6a4 4 0 0 1 8 0v4m-4 5v2"/>',
-  wing: '<path d="m12 3 3 5 7 3-2 8-5-3-3 5-3-5-5 3-2-8 7-3zM12 8v10M4 12l5 2m11-2-5 2"/>',
-  body: '<path d="m12 2 6 6v10l-6 4-6-4V8zM9 8h6v7H9zM6 13H3v5h3m12-5h3v5h-3"/>',
+  weapon: '<path d="M7 3h3v13H6V7zm7 0h3l1 4v9h-4zM6 10h4m4 0h4M8 16v5m8-5v5M10 18h4"/>',
+  wing: '<path d="m10 5-8 7 1 6 6-2 3 4 3-4 6 2 1-6-8-7-2 3zM12 8v12M3 13l6-4-1 5-5 2m18-3-6-4 1 5 5 2"/>',
+  body: '<path d="m8 3-3 4v10l3 4h8l3-4V7l-3-4zM8 3v4h8V3M9 10h6v6H9zM5 11H3v5h2m14-5h2v5h-2M8 19h8"/>',
+  search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5M8 6.5a4.5 4.5 0 0 1 5 0"/>',
   frost: '<path d="M12 2v20M3 7l18 10M3 17 21 7M8 4l4 3 4-3M8 20l4-3 4 3M3 11l4-2V5m14 8-4 2v4M3 13l4 2v4m14-8-4-2V5"/>',
   mender: '<path d="m12 2 8 4v7c0 4-4 7-8 9-4-2-8-5-8-9V6zM12 8v8m-4-4h8"/>',
   records: '<circle cx="12" cy="12" r="9"/><path d="m16 7-2 7-6 3 2-7zM12 2v2m0 16v2M2 12h2m16 0h2"/>',
@@ -408,8 +410,8 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     }
   }
   const inventoryMarkup = () => `
-    <div class="inventory-category-tabs" role="tablist" aria-label="装備の種類">${(['weapon', 'wing', 'body', 'drone'] as InventoryCategory[]).map(category => `<button data-action="inventory-category" data-id="${category}" role="tab" aria-selected="${category === inventoryCategory}">${icon(category === 'weapon' ? 'pulse' : category)}<span>${categoryLabel(category)}</span></button>`).join('')}</div>
-    <div class="inventory-commandbar"><label class="inventory-search">${icon('crosshair')}<input type="search" data-inventory-control="search" aria-label="装備名・能力で検索" placeholder="装備名・能力を検索" value="${escapeHTML(inventorySearch)}" autocomplete="off" spellcheck="false"><button class="inventory-search-clear" data-action="clear-inventory-search" aria-label="検索を消去" title="検索を消去" ${inventorySearch ? "" : "hidden"}>×</button></label><label><span class="sr-only">保管状態</span><select data-inventory-control="ownership" aria-label="装備・保護の状態で絞り込み"><option value="all">すべて</option><option value="equipped">装備中</option><option value="protected">保護中</option><option value="sellable">売却可能</option></select></label></div>
+    <div class="inventory-category-tabs" role="tablist" aria-label="装備の種類">${(['weapon', 'wing', 'body', 'drone'] as InventoryCategory[]).map(category => `<button data-action="inventory-category" data-id="${category}" role="tab" aria-selected="${category === inventoryCategory}">${icon(category)}<span>${categoryLabel(category)}</span></button>`).join('')}</div>
+    <div class="inventory-commandbar"><label class="inventory-search">${icon('search')}<input type="search" data-inventory-control="search" aria-label="装備名・能力で検索" placeholder="装備名・能力を検索" value="${escapeHTML(inventorySearch)}" autocomplete="off" spellcheck="false"><button class="inventory-search-clear" data-action="clear-inventory-search" aria-label="検索を消去" title="検索を消去" ${inventorySearch ? "" : "hidden"}>×</button></label><label><span class="sr-only">保管状態</span><select data-inventory-control="ownership" aria-label="装備・保護の状態で絞り込み"><option value="all">すべて</option><option value="equipped">装備中</option><option value="protected">保護中</option><option value="sellable">売却可能</option></select></label></div>
     <div class="inventory-tools-row"><details class="inventory-tools"><summary><span>自動売却 <b data-inventory="policy-label">OFF</b></span><small>条件・設定 ${icon('settings')}</small></summary><div class="inventory-tools-content"><h3>取得時の自動売却</h3><div class="inventory-policy"><label><span class="sr-only">自動売却の上限</span><select data-inventory-control="auto-sell" aria-label="自動売却するレア度の上限"><option value="off">OFF — レア度で売却しない</option>${RARITIES.map(item => `<option value="${item.id}">${item.label}以下を売却</option>`).join('')}</select></label><small>全装備共通・今後の取得分だけに適用。装備中・保護中・初期装備は保管します。</small></div><h3>詳細な絞り込み</h3><div class="inventory-filters"><label><span class="sr-only">レア度</span><select data-inventory-control="rarity" aria-label="レア度で絞り込み"><option value="all">全レア度</option>${RARITIES.map(item => `<option value="${item.id}">${item.label}</option>`).join('')}</select></label><label data-inventory="weapon-type-filter"><span class="sr-only">武器系統</span><select data-inventory-control="type" aria-label="武器系統で絞り込み"><option value="all">全系統</option>${Object.entries(WEAPON_BASES).map(([id, base]) => `<option value="${id}">${base.name}</option>`).join('')}</select></label><label><span class="sr-only">並び順</span><select data-inventory-control="sort" aria-label="装備の並び順"><option value="newest">新しい順</option><option value="rarity">レア度順</option><option value="dps">DPS / 評価順</option><option value="level">拾得Lv順</option></select></label></div><p>倉庫内の装備は「一括整理」で対象と金額を確認してから売却。満杯時は未保護の装備をレア度・性能で比べて整理します。</p><button class="inventory-tools-return" data-action="close-inventory-tools">装備の比較に戻る</button></div></details><button class="bulk-review-button" data-action="review-bulk">一括整理</button></div>
     <div class="inventory-active-filters" data-inventory="active-filters" hidden></div>
     <div class="bulk-review" data-inventory="bulk-review" hidden></div><div class="referenced-sale-review" data-inventory="referenced-sale" hidden></div>
@@ -467,9 +469,10 @@ export function setupUI(sim: Simulation, options: UIOptions = {}): { render(): v
     query('[data-inventory="list"]').innerHTML = filtered.length ? filtered.slice(inventoryPage * inventoryPageSize, (inventoryPage + 1) * inventoryPageSize).map(item => {
       const rarity = rarityInfo(item.rarity);
       const equipped = item.id === equippedItem(inventoryCategory).id;
-      const status = equipped ? '装備中' : item.starter || item.locked ? '保護中' : '';
+      const protectedGear = Boolean(item.starter || item.locked);
+      const status = [equipped ? '装備中' : '', protectedGear ? '保護中' : ''].filter(Boolean).join('、');
       const label = `${item.name}、${itemBase(item).name}、${rarity.label}、拾得Lv.${item.level}、強化+${enhancementLevel(item)}${status ? `、${status}` : ''}`;
-      return `<button class="loot-card ${item.id === selectedItemId ? 'selected' : ''}" data-action="inspect-weapon" data-id="${escapeHTML(item.id)}" aria-label="${escapeHTML(label)}" title="${escapeHTML(label)}" tabindex="${item.id === inventoryFocusId ? 0 : -1}" aria-pressed="${item.id === selectedItemId}" style="--rarity-color:${cssColor(rarity.color)}"><span class="loot-tile-rarity" aria-hidden="true"></span><span class="loot-tile-art" aria-hidden="true">${gearArt(item)}</span><span class="loot-tile-level" aria-hidden="true">Lv.${item.level}</span><span class="loot-tile-enhancement" aria-hidden="true">+${enhancementLevel(item)}</span>${status ? `<span class="loot-tile-state" aria-hidden="true">${equipped ? '<svg class="loot-tile-equipped" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg>' : icon('lock')}</span>` : ''}</button>`;
+      return `<button class="loot-card ${item.id === selectedItemId ? 'selected' : ''}" data-action="inspect-weapon" data-id="${escapeHTML(item.id)}" aria-label="${escapeHTML(label)}" title="${escapeHTML(label)}" tabindex="${item.id === inventoryFocusId ? 0 : -1}" aria-pressed="${item.id === selectedItemId}" style="--rarity-color:${cssColor(rarity.color)}"><span class="loot-tile-rarity" aria-hidden="true"></span><span class="loot-tile-art" aria-hidden="true">${gearArt(item)}</span><span class="loot-tile-level" aria-hidden="true">Lv.${item.level}</span><span class="loot-tile-enhancement" aria-hidden="true">+${enhancementLevel(item)}</span>${status ? `<span class="loot-tile-state" aria-hidden="true">${equipped ? '<svg class="loot-tile-equipped" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg>' : ''}${protectedGear ? icon('lock') : ''}</span>` : ''}</button>`;
     }).join('') : '<div class="inventory-empty"><p>この条件の装備はありません。</p><button data-action="reset-inventory-filters">絞り込みを解除</button></div>';
     query('[data-inventory="page"]').textContent = `${inventoryPage + 1} / ${pageCount} · ${filtered.length} 件`;
     query<HTMLButtonElement>('[data-action="inventory-prev"]').disabled = inventoryPage <= 0;

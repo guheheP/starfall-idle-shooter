@@ -1,32 +1,37 @@
 /* Warehouse-only polish. The reading pane scrolls; the upgrade and action rails keep their positions. */
 .inventory-dialog {
-  --inventory-ink: #e0edf3;
-  --inventory-muted: #9db8ca;
-  --inventory-line: #36556c;
-  --inventory-surface: #102332;
+  --inventory-ink: #edf2f8;
+  --inventory-muted: #a1b4c9;
+  --inventory-line: #33465b;
+  --inventory-surface: #0e1b2c;
+  --inventory-raised: #17263a;
+  --inventory-rim: #53677f;
+  --inventory-accent: #b7e5ec;
   width: min(1080px, calc(100vw - 24px));
   padding: 20px;
   color: var(--inventory-ink);
-  background: linear-gradient(135deg, #203647, #0c1b2a 34%, #071321);
+  border-color: var(--inventory-rim);
+  background: radial-gradient(ellipse at 10% 0, #32476245, transparent 60%), linear-gradient(155deg, #142236, #091422 70%);
+  box-shadow: inset 0 1px #e7f2ff1a, inset 0 -1px #030a12, 0 18px 60px #0008;
 }
 .inventory-dialog .dialog-body { gap: 9px; }
 .inventory-dialog h2 { margin: 7px 0 13px; font-size: 22px; letter-spacing: .08em; }
-.inventory-dialog .dialog-eyebrow { color: #8cacbe; font-size: 10px; }
+.inventory-dialog .dialog-eyebrow { color: var(--inventory-muted); font-size: 10px; letter-spacing: .16em; }
 .inventory-dialog .dialog-actions { margin-top: 9px; }
 .inventory-dialog .inventory-return-hint { color: var(--inventory-muted); font-size: 11px; }
 .inventory-dialog :is(button, input, select, summary):focus-visible { outline: 2px solid #c2f4ff; outline-offset: 2px; }
 .inventory-dialog :is(input, select) { color: #d8e9ef; }
-.inventory-dialog :is(select, .inventory-search) { border-color: #416176; background: #102433; }
+.inventory-dialog :is(select, .inventory-search) { border-color: var(--inventory-line); border-radius: 5px; background: linear-gradient(#132237, #0e1b2c); box-shadow: inset 0 1px #e7f2ff08; }
 .inventory-dialog :is(button, select) { touch-action: manipulation; }
 
 .inventory-dialog .inventory-category-tabs { gap: 7px; }
-.inventory-dialog .inventory-category-tabs button { height: 40px; min-width: 0; font-size: 12px; gap: 7px; color: #afc7d6; background: #102537; border-color: #36566d; }
-.inventory-dialog .inventory-category-tabs button[aria-selected='true'] { color: #e1faff; background: linear-gradient(115deg, #254b5b, #153447); border-color: #80c4d7; box-shadow: inset 0 -2px #a1e9f3, inset 0 1px #c2faff14; }
-.inventory-dialog .inventory-category-tabs button:hover:not([aria-selected='true']) { color: #e1f3fa; background: #1b3b50; border-color: #5f91a8; }
+.inventory-dialog .inventory-category-tabs button { height: 40px; min-width: 0; font-size: 12px; gap: 7px; color: #aabdd0; background: linear-gradient(155deg, var(--inventory-raised), #101e30); border-color: var(--inventory-line); border-radius: 5px; box-shadow: inset 0 1px #e7f2ff0a; }
+.inventory-dialog .inventory-category-tabs button[aria-selected='true'] { color: #e0f7fa; background: linear-gradient(155deg, #2a4052, #142b3a); border-color: #82b7c6; box-shadow: inset 0 -2px var(--inventory-accent), inset 0 1px #e7faff1c; }
+.inventory-dialog .inventory-category-tabs button:hover:not([aria-selected='true']) { color: #e1f3fa; background: linear-gradient(155deg, #203449, #142538); border-color: #67809a; }
 .inventory-dialog .inventory-commandbar { grid-template-columns: minmax(0, 1fr) 150px; gap: 9px; }
 .inventory-dialog .inventory-commandbar select { height: 38px; padding: 5px 9px; font-size: 12px; }
 .inventory-dialog .inventory-search { min-width: 0; gap: 8px; padding: 0 10px; }
-.inventory-dialog .inventory-search:focus-within { border-color: #a2dceb; box-shadow: 0 0 0 1px #a2dceb35; }
+.inventory-dialog .inventory-search:focus-within { border-color: var(--inventory-accent); box-shadow: 0 0 0 1px #b7e5ec25; }
 .inventory-dialog .inventory-search input { height: 36px; font-size: 12px; color: #e5f2f7; }
 .inventory-dialog .inventory-search input::placeholder { color: #8cacbe; }
 .inventory-dialog .inventory-search input:focus-visible { outline-offset: 0; }
@@ -41,7 +46,7 @@
 .inventory-dialog.bulk-review-active .inventory-active-filters,
 .inventory-dialog.referenced-sale-active .inventory-active-filters { display: none; }
 .inventory-dialog .inventory-tools-row { gap: 9px; }
-.inventory-dialog .inventory-tools { border-color: var(--inventory-line); background: #102434; }
+.inventory-dialog .inventory-tools { border-color: var(--inventory-line); border-radius: 5px; background: var(--inventory-surface); box-shadow: inset 0 1px #e7f2ff08; }
 .inventory-dialog .inventory-tools > summary { height: 34px; padding: 6px 10px; font-size: 11px; color: #b1c9d8; }
 .inventory-dialog .inventory-tools > summary b { color: #d5edf6; }
 .inventory-dialog .inventory-tools > summary small { font-size: 11px; color: #a7c7d9; }
@@ -72,7 +77,9 @@
 .inventory-dialog .inventory-empty button { min-height: 36px; font-size: 12px; }
 .inventory-dialog .inventory-summary { color: #8fafc3; font-size: 10px; line-height: 1.4; }
 
-.inventory-dialog .inventory-inspect { padding: 13px; border-color: #405f76; background: linear-gradient(145deg, #153045, #0a1928 70%); }
+.inventory-dialog .inventory-inspect { padding: 13px; border-color: var(--inventory-line); border-radius: 7px; background: linear-gradient(150deg, #182b40, #0b1828 70%); box-shadow: inset 0 1px #e7f2ff12; }
+.inventory-dialog .inspect-art { border-color: color-mix(in srgb, var(--rarity-color) 45%, var(--inventory-line)); border-radius: 5px; background: radial-gradient(ellipse at 50% 45%, color-mix(in srgb, var(--rarity-color) 10%, #16283c), #0b1828 85%); box-shadow: inset 0 1px #e7f2ff14, inset 0 -2px #0003; }
+.inventory-dialog .inspect-art .gear-art-svg { height: auto; aspect-ratio: 120 / 88; }
 .inventory-dialog .inspect-header { padding-bottom: 10px; gap: 12px; }
 .inventory-dialog .inspect-header h3 { color: #edf6f8; font-size: 17px; line-height: 1.4; margin: 4px 0; }
 .inventory-dialog .inspect-header .rarity-label { font-size: 10px; line-height: 1.5; }
@@ -87,7 +94,7 @@
 .inventory-dialog .inspect-scroll { padding-top: 12px; padding-right: 5px; scroll-padding-block: 9px; overscroll-behavior: contain; }
 .inventory-dialog .comparison-caption { flex-wrap: wrap; row-gap: 3px; margin-bottom: 8px; color: #cbdde8; font-size: 12px; line-height: 1.5; }
 .inventory-dialog .comparison-caption > span { color: #a0bacc; font-size: 10px; }
-.inventory-dialog .weapon-comparison { gap: 8px; padding: 12px 8px; background: #071524; border-color: #37566d; }
+.inventory-dialog .weapon-comparison { gap: 8px; padding: 12px 8px; background: #081321; border-color: var(--inventory-line); border-radius: 5px; box-shadow: inset 0 1px #02080e; }
 .inventory-dialog .weapon-comparison > div { padding: 2px 0; }
 .inventory-dialog .weapon-comparison > div + div { border-left: 1px solid #294458; }
 .inventory-dialog .weapon-comparison span { font-size: 10px; line-height: 1.45; color: #acc8d9; }
@@ -409,7 +416,7 @@
   .inventory-dialog .inventory-inspect { display: none; min-width: 0; min-height: 0; padding: 10px; overflow: hidden; }
   .inventory-dialog .inspect-header { align-items: flex-start; gap: 10px; padding-bottom: 12px; margin-bottom: 12px; }
   .inventory-dialog .inspect-art { display: grid; width: 45px; height: 54px; }
-  .inventory-dialog .inspect-art svg { width: 35px; height: 35px; }
+  .inventory-dialog .inspect-art .gear-art-svg { width: 35px; height: auto; aspect-ratio: 120 / 88; }
   .inventory-dialog .inspect-header > div:last-child { display: block; width: auto; min-width: 0; flex: 1; font-size: 14px; }
   .inventory-dialog .inspect-header .rarity-label { display: flex; font-size: 12px; line-height: 1.5; }
   .inventory-dialog .inspect-header h3 { margin: 5px 0; font-size: 18px; line-height: 1.45; }
@@ -548,10 +555,12 @@
   gap: 8px;
   padding: 4px;
   scroll-padding-block: 8px;
+  scrollbar-color: #425b75 #0c1725;
 }
 .inventory-dialog .inventory-pagination { display: none; }
 .inventory-dialog .inventory-empty { grid-column: 1 / -1; }
 .inventory-dialog .loot-card {
+  --tile-edge: color-mix(in srgb, var(--rarity-color) 54%, #304157);
   position: relative;
   display: block;
   width: 100%;
@@ -561,10 +570,10 @@
   margin: 0;
   padding: 0;
   gap: 0;
-  border: 1px solid color-mix(in srgb, var(--rarity-color) 65%, #263d50);
-  border-radius: 5px;
-  background: linear-gradient(145deg, color-mix(in srgb, var(--rarity-color) 9%, #182f40), #091928 80%);
-  box-shadow: inset 0 1px #d7eeff0c, inset 0 -2px #0004;
+  border: 1px solid var(--tile-edge);
+  border-radius: 7px;
+  background: radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--rarity-color) 8%, #1b2d43), transparent 74%), linear-gradient(155deg, #17273b, #0c1726 80%);
+  box-shadow: inset 0 1px #e7f2ff14, inset 0 -2px #030a1370, 0 1px 2px #0003;
   color: var(--inventory-ink);
   text-align: center;
   touch-action: manipulation;
@@ -572,18 +581,18 @@
 .inventory-dialog .loot-card::before {
   content: '';
   position: absolute;
-  left: 7px;
-  bottom: 9px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--rarity-color);
-  box-shadow: 0 0 4px color-mix(in srgb, var(--rarity-color) 45%, transparent);
+  top: 0;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: linear-gradient(90deg, transparent, var(--rarity-color) 25% 75%, transparent);
+  opacity: .8;
   pointer-events: none;
 }
 .inventory-dialog .loot-card::after {
-  top: 2px;
-  right: 2px;
+  top: 3px;
+  right: 3px;
   width: 7px;
   height: 7px;
   border: 0;
@@ -591,15 +600,15 @@
 }
 .inventory-dialog .loot-card:hover {
   border-color: var(--rarity-color);
-  background: linear-gradient(145deg, color-mix(in srgb, var(--rarity-color) 15%, #203a4d), #102638 80%);
+  background: radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--rarity-color) 13%, #243a50), transparent 75%), linear-gradient(155deg, #21344a, #112134 80%);
 }
 .inventory-dialog .loot-card.selected {
   border-width: 1px;
   border-color: var(--rarity-color);
-  outline: 2px solid #a2edf5;
+  outline: 2px solid var(--inventory-accent);
   outline-offset: 1px;
-  background: linear-gradient(145deg, color-mix(in srgb, var(--rarity-color) 13%, #224553), #102637 80%);
-  box-shadow: inset 0 0 0 1px #a2edf51a, inset 0 1px #e6ffff18;
+  background: radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--rarity-color) 14%, #2a4258), transparent 75%), linear-gradient(155deg, #283c50, #12263a 80%);
+  box-shadow: inset 0 0 0 1px #c0edf514, inset 0 1px #e6ffff26, 0 1px 3px #0005;
 }
 .inventory-dialog .loot-card.selected::after {
   border-top: 2px solid #d3fbff;
@@ -607,26 +616,29 @@
   opacity: 1;
 }
 .inventory-dialog .loot-card:focus-visible { outline: 2px solid #e0fbff; outline-offset: 1px; }
+.inventory-dialog .loot-tile-rarity { position: absolute; left: 7px; bottom: 1px; width: 3px; height: 3px; border-radius: 1px; background: var(--rarity-color); pointer-events: none; }
 .inventory-dialog .loot-tile-art {
   position: absolute;
-  inset: 20px 6px 23px;
+  inset: 22px 4px 21px;
   display: grid;
   place-items: center;
   pointer-events: none;
 }
 .inventory-dialog .loot-tile-art .gear-art-svg {
   display: block;
-  width: 48px;
-  height: 35px;
+  width: 52px;
+  height: 38px;
   max-width: 100%;
-  filter: drop-shadow(0 2px 2px #0008);
+  filter: none;
 }
 .inventory-dialog .loot-tile-level {
   position: absolute;
-  inset: auto 4px 5px 14px;
-  color: #cfe3ef;
+  inset: auto 3px 5px 3px;
+  color: #d5e1ed;
+  font-family: var(--type);
   font-size: 12px;
   font-weight: 500;
+  letter-spacing: -.25px;
   line-height: 1.35;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -637,7 +649,8 @@
   top: 5px;
   right: 7px;
   max-width: 45%;
-  color: #e5d5b5;
+  color: #ecd6ad;
+  font-family: var(--type);
   font-size: 11px;
   font-weight: 600;
   line-height: 1.3;
@@ -647,17 +660,22 @@
 }
 .inventory-dialog .loot-tile-state {
   position: absolute;
-  top: 6px;
-  left: 6px;
+  top: 5px;
+  left: 5px;
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   max-width: 50%;
-  color: #c7b7e0;
+  padding: 2px;
+  border: 1px solid #736c9859;
+  border-radius: 4px;
+  background: #0a1425de;
+  color: #d2c2ed;
   pointer-events: none;
 }
 .inventory-dialog .loot-tile-state svg { flex: 0 0 12px; width: 12px; height: 12px; }
-.inventory-dialog .loot-tile-state .loot-tile-equipped { color: #abf1d2; }
+.inventory-dialog .loot-tile-state:has(.loot-tile-equipped) { border-color: #8dd8b85e; background: #102a24e6; }
+.inventory-dialog .loot-tile-state .loot-tile-equipped { color: #b0efd3; }
 
 @media (max-width: 760px), (max-height: 500px) and (max-width: 1000px) {
   .inventory-dialog .inventory-list {
@@ -667,5 +685,5 @@
     padding: 3px;
   }
   .inventory-dialog .loot-card { height: 82px; min-height: 44px; padding: 0; gap: 0; }
-  .inventory-dialog .loot-tile-art .gear-art-svg { width: 44px; height: 33px; }
+  .inventory-dialog .loot-tile-art .gear-art-svg { width: 48px; height: 35px; }
 }
